@@ -1,0 +1,8 @@
+{
+  "[ruby]": {
+    "editor.defaultFormatter": "Shopify.ruby-lsp",
+    "editor.formatOnSave": true
+  },
+  "standardRuby.mode": "onlyRunGlobally",
+  "standardRuby.commandPath": "/Users/jessitron/.local/share/mise/shims/standardrb"
+}
