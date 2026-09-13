@@ -9,6 +9,8 @@ Deploy:   modal deploy app.py
 Dev/test: modal serve app.py   (spins up a temporary URL, tears down on Ctrl-C)
 """
 
+import os
+
 import modal
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B"
@@ -27,7 +29,15 @@ vllm_image = (
         "opentelemetry-exporter-otlp-proto-http==1.27.0",
         "opentelemetry-semantic-conventions-ai==0.4.2",
     )
-    .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})
+    .env({
+        "HF_HUB_ENABLE_HF_TRANSFER": "1",
+        # so `--middleware otel_middleware.trace_http_requests` can import it
+        "PYTHONPATH": "/root",
+    })
+    .add_local_file(
+        local_path=os.path.join(os.path.dirname(__file__), "otel_middleware.py"),
+        remote_path="/root/otel_middleware.py",
+    )
 )
 
 app = modal.App("llms-from-the-top-base")
@@ -65,6 +75,9 @@ def serve():
         # T4 has compute capability 7.5; bfloat16 (vLLM's default) needs 8.0+.
         "--dtype", "half",
         "--otlp-traces-endpoint", HONEYCOMB_TRACES_ENDPOINT,
+        # Adds the root HTTP span (client info, prompt/completion content)
+        # that vLLM's own --otlp-traces-endpoint tracer doesn't record.
+        "--middleware", "otel_middleware.trace_http_requests",
     ]
 
     env = {
@@ -74,5 +87,8 @@ def serve():
         # endpoint above is the http/protobuf one.
         "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": "http/protobuf",
         "OTEL_EXPORTER_OTLP_HEADERS": f"x-honeycomb-team={os.environ['HONEYCOMB_API_KEY']}",
+        # otel_middleware.py builds its own exporter from this directly,
+        # since it runs a separate TracerProvider from vLLM's own tracer.
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": HONEYCOMB_TRACES_ENDPOINT,
     }
     subprocess.Popen(" ".join(cmd), shell=True, env=env)
