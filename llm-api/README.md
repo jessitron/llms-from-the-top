@@ -53,8 +53,22 @@ Still to do:
 - custom domain (`llms-from-the-top.jessitron.com`) in front of the Modal URL
 - `x-api-key` auth and `use-this-model-please` header routing (base vs. trained model)
 - a second, chat/instruction-tuned model for the "trained" path
-- OpenTelemetry → Honeycomb telemetry
 
 ## Telemetry
 
-This app uses (will use) OpenTelemetry to send data to Honeycomb.
+`app.py` turns on vLLM's built-in OpenTelemetry tracing (`--otlp-traces-endpoint`)
+and points it at Honeycomb, so every request gets a span with queue time,
+time-to-first-token, and other `gen_ai.*` attributes.
+
+One-time setup, before your first deploy:
+
+```
+modal secret create honeycomb HONEYCOMB_API_KEY=<your Honeycomb API key>
+```
+
+That's it — `./run`, `./start`, etc. all pick it up automatically. Traces land
+in the `llms-from-the-top-api` service in Honeycomb.
+
+Note: vLLM's OTel tracing only covers request-level spans inside vLLM itself;
+it doesn't propagate trace context in from callers (the agent side) or out to
+downstream calls, since vLLM is the whole app here.

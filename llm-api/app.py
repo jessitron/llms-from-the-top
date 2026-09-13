@@ -13,12 +13,19 @@ import modal
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B"
 SERVED_MODEL_NAME = "base"
+HONEYCOMB_TRACES_ENDPOINT = "https://api.honeycomb.io/v1/traces"
+OTEL_SERVICE_NAME = "llms-from-the-top-api"
 
 vllm_image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install(
         "vllm==0.6.6.post1",
         "huggingface_hub[hf_transfer]==0.26.2",
+        # vLLM's own OTel tracing (--otlp-traces-endpoint) is an optional
+        # import — these packages aren't in vllm's own requirements.
+        "opentelemetry-sdk==1.27.0",
+        "opentelemetry-exporter-otlp-proto-http==1.27.0",
+        "opentelemetry-semantic-conventions-ai==0.4.2",
     )
     .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})
 )
@@ -27,6 +34,9 @@ app = modal.App("llms-from-the-top-base")
 
 hf_cache_vol = modal.Volume.from_name("llms-from-the-top-hf-cache", create_if_missing=True)
 vllm_cache_vol = modal.Volume.from_name("llms-from-the-top-vllm-cache", create_if_missing=True)
+
+# One-time setup: modal secret create honeycomb HONEYCOMB_API_KEY=<your Honeycomb API key>
+honeycomb_secret = modal.Secret.from_name("honeycomb", required_keys=["HONEYCOMB_API_KEY"])
 
 
 @app.function(
@@ -38,10 +48,12 @@ vllm_cache_vol = modal.Volume.from_name("llms-from-the-top-vllm-cache", create_i
         "/root/.cache/huggingface": hf_cache_vol,
         "/root/.cache/vllm": vllm_cache_vol,
     },
+    secrets=[honeycomb_secret],
 )
 @modal.concurrent(max_inputs=32)
 @modal.web_server(port=8000, startup_timeout=10 * 60)
 def serve():
+    import os
     import subprocess
 
     cmd = [
@@ -52,5 +64,15 @@ def serve():
         "--port", "8000",
         # T4 has compute capability 7.5; bfloat16 (vLLM's default) needs 8.0+.
         "--dtype", "half",
+        "--otlp-traces-endpoint", HONEYCOMB_TRACES_ENDPOINT,
     ]
-    subprocess.Popen(" ".join(cmd), shell=True)
+
+    env = {
+        **os.environ,
+        "OTEL_SERVICE_NAME": OTEL_SERVICE_NAME,
+        # vLLM defaults the OTLP protocol to grpc; Honeycomb's traces
+        # endpoint above is the http/protobuf one.
+        "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": "http/protobuf",
+        "OTEL_EXPORTER_OTLP_HEADERS": f"x-honeycomb-team={os.environ['HONEYCOMB_API_KEY']}",
+    }
+    subprocess.Popen(" ".join(cmd), shell=True, env=env)
