@@ -7,8 +7,9 @@ require 'json'
 print 'vort> '
 input = gets.chomp
 
-request = input
-response = Net::HTTP.post URI('https://llms-from-the-top.jessitron.com/v1/completions'), request.to_json, {
+request = { model: 'base', prompt: input }
+api_url = ENV.fetch('LLM_API_URL', 'https://llms-from-the-top.jessitron.com')
+response = Net::HTTP.post URI("#{api_url}/v1/completions"), request.to_json, {
   "x-api-key": 'hydro-building',
   "use-this-model-please": 'base',
   "content-type": 'application/json'
