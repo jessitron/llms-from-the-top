@@ -50,5 +50,7 @@ def serve():
         "--served-model-name", SERVED_MODEL_NAME,
         "--host", "0.0.0.0",
         "--port", "8000",
+        # T4 has compute capability 7.5; bfloat16 (vLLM's default) needs 8.0+.
+        "--dtype", "half",
     ]
     subprocess.Popen(" ".join(cmd), shell=True)
