@@ -49,6 +49,10 @@ curl $URL/v1/completions -H 'content-type: application/json' -d '{
 ./stop    # modal app stop — terminates it
 ```
 
+`./start` also sends one warm-up request right after deploying, so the GPU
+spin-up and model load happen during `./start` instead of on the first real
+caller's request.
+
 Still to do:
 - custom domain (`llms-from-the-top.jessitron.com`) in front of the Modal URL
 - `x-api-key` auth and `use-this-model-please` header routing (base vs. trained model)

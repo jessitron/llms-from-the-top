@@ -2,6 +2,27 @@
 # Deploys the base-model API to Modal as a persistent app.
 # Unlike ./run (modal serve), this returns immediately and keeps running
 # — with GPU billing — until you run ./stop.
+#
+# `modal deploy` returns before the container has actually started, so the
+# first real request would otherwise pay for the GPU spin-up and model load.
+# We send one warm-up request right after deploying to eat that cold start.
 set -euo pipefail
 cd "$(dirname "$0")"
-modal deploy app.py
+
+deploy_log="$(mktemp)"
+trap 'rm -f "$deploy_log"' EXIT
+
+modal deploy app.py 2>&1 | tee "$deploy_log"
+
+url="$(grep -oE 'https://[^[:space:]]+\.modal\.run' "$deploy_log" | head -1)"
+
+if [ -z "$url" ]; then
+  echo "Couldn't find the deployed URL in modal's output; skipping warm-up request." >&2
+  exit 0
+fi
+
+echo "Warming up $url (this loads the model onto the GPU, can take a few minutes)..."
+curl -sS --max-time 600 "$url/v1/completions" \
+  -H 'content-type: application/json' \
+  -d '{"model": "base", "prompt": "Hello", "max_tokens": 1}' \
+  -o /dev/null -w 'warm-up request: HTTP %{http_code} in %{time_total}s\n'
