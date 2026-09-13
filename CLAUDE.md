@@ -17,3 +17,15 @@ Common commands:
 - `yx prune` — remove all done yaks (tidy up periodically)
 
 When starting a new piece of work in this repo, check `yx list --ready` first before assuming what's next. When finishing a piece of work, mark the corresponding yak `done` rather than just leaving it.
+
+## Finishing a worktree: use `scripts/merge-worktree.sh`
+
+When work in a worktree is done, merge it into local main with this script rather than doing the merge/cleanup by hand. Run it from the main checkout (repo root), not from inside the worktree — use ExitWorktree first.
+
+```
+scripts/merge-worktree.sh [--keep-merge-commit] <branch-name> ["merge commit message"]
+```
+
+It fast-forwards main when possible (pass `--keep-merge-commit` to force a `--no-ff` merge commit instead), stashes any uncommitted changes in main first and restores them after, and removes the worktree and branch once merged. No push, no PR — this is a local-only merge, per the user's standing instruction to merge locally and never push/PR unless explicitly asked.
+
+The script has a spot reserved for running the project's test suite after merging and before cleanup — there isn't one yet, so it currently just prints a note and skips. When this project gets tests (or a `./run` entry point), wire the invocation into that spot in the script.
