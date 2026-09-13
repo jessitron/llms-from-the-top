@@ -32,7 +32,7 @@ one-time wizard, not meant to be re-run) and follow the prompts.
 ```
 
 Starts a temporary Modal endpoint (torn down on Ctrl-C) and prints its URL.
-Test it with, e.g.:
+Good for iterating on `app.py`. Test it with, e.g.:
 
 ```
 curl $URL/v1/completions -H 'content-type: application/json' -d '{
@@ -45,7 +45,8 @@ curl $URL/v1/completions -H 'content-type: application/json' -d '{
 ### Persistent deploy
 
 ```
-modal deploy app.py
+./start   # modal deploy — stays up (and billing GPU time) until stopped
+./stop    # modal app stop — terminates it
 ```
 
 Still to do:

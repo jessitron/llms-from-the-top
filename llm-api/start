@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Deploys the base-model API to Modal as a persistent app.
+# Unlike ./run (modal serve), this returns immediately and keeps running
+# — with GPU billing — until you run ./stop.
+set -euo pipefail
+cd "$(dirname "$0")"
+modal deploy app.py
