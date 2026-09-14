@@ -1,0 +1,10 @@
+name = "llms-from-the-top-edge"
+main = "src/index.js"
+compatibility_date = "2026-09-14"
+
+[vars]
+BACKEND_URL = "https://jessitron--llms-from-the-top-base-serve.modal.run"
+
+[[routes]]
+pattern = "llms-from-the-top.jessitron.com/*"
+zone_name = "jessitron.com"
