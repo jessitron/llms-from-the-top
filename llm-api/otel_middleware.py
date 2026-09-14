@@ -7,6 +7,10 @@ never content).
 Wired in via vLLM's `--middleware otel_middleware.trace_http_requests` flag
 (see app.py) — no vLLM source changes needed.
 
+Buffers the full response body to read the completion text back out, so it
+doesn't support `stream: true` requests (the response would need to be
+forwarded chunk-by-chunk instead).
+
 We inject a `traceparent` header for the request we're about to route, so
 that vLLM's own engine span (which extracts trace context from incoming
 request headers) nests under the span this middleware creates, even though
@@ -24,7 +28,6 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
 MAX_ATTR_LEN = 4000
-STREAMED_CONTENT_TYPE = "text/event-stream"
 
 _provider = TracerProvider(
     resource=Resource.create(
@@ -111,13 +114,6 @@ async def trace_http_requests(request, call_next):
         span.set_attribute("http.response.status_code", response.status_code)
         if response.status_code >= 400:
             span.set_status(Status(StatusCode.ERROR))
-
-        content_type = response.headers.get("content-type", "")
-        if STREAMED_CONTENT_TYPE in content_type:
-            # Streamed responses (stream=true) are passed through untouched:
-            # buffering them here would defeat the point of streaming, and
-            # would end this span at first-byte rather than at completion.
-            return response
 
         response_body = b"".join(
             [chunk async for chunk in response.body_iterator]  # type: ignore[union-attr]
