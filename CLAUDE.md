@@ -18,6 +18,12 @@ Common commands:
 
 When starting a new piece of work in this repo, check `yx list --ready` first before assuming what's next. When finishing a piece of work, mark the corresponding yak `done` rather than just leaving it.
 
+## Create yaks liberally
+
+Whenever you discover something that we should do, but right this instant is not the time to do it, add a yak!
+
+Whenever the user mentions something additional to do, before you start investigating, add a yak!
+
 ## Finishing a worktree: use `scripts/merge-worktree.sh`
 
 When work in a worktree is done, merge it into local main with this script rather than doing the merge/cleanup by hand. Run it from the main checkout (repo root), not from inside the worktree — use ExitWorktree first.
