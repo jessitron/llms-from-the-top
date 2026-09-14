@@ -86,10 +86,9 @@ modal secret create honeycomb HONEYCOMB_API_KEY=<your Honeycomb API key>
 That's it — `./run`, `./start`, etc. all pick it up automatically.
 
 Caveats:
-- `stream: true` requests are passed straight through — buffering them to
-  capture the completion text would defeat the point of streaming — so those
-  spans get client/prompt info but no completion content, and the span ends
-  near first-byte rather than at the end of the stream.
+- `stream: true` requests aren't supported by the middleware (it buffers the
+  full response body to read the completion text back out) — not needed for
+  this workshop, so it's left unhandled rather than passed through.
 - Request/response text is truncated to 4000 chars per field before being
   attached as a span attribute.
 - vLLM's own tracing only covers request-level spans inside vLLM itself; there's
