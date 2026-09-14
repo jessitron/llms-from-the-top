@@ -54,8 +54,12 @@ spin-up and model load happen during `./start` instead of on the first real
 caller's request.
 
 Still to do:
-- custom domain (`llms-from-the-top.jessitron.com`) in front of the Modal URL
-- `x-api-key` auth and `use-this-model-please` header routing (base vs. trained model)
+- ~~custom domain (`llms-from-the-top.jessitron.com`) in front of the Modal URL~~ —
+  see `../edge-proxy/` (a Cloudflare Worker, since Modal's own custom domains
+  need a paid plan); run `edge-proxy/setup-cloudflare-worker.sh` to finish
+  the one-time Cloudflare login + deploy
+- `x-api-key` auth and `use-this-model-please` header routing (base vs. trained model) —
+  now natural to add inside `edge-proxy/src/index.js`
 - a second, chat/instruction-tuned model for the "trained" path
 
 ## Telemetry
