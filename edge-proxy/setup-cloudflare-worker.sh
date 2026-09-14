@@ -200,21 +200,24 @@ else
   else
     warn "Skipping install — re-run this wizard once wrangler is available."
     SKIPPED+=("install wrangler (npm install -g wrangler)")
+    pause "Continue?"
   fi
 fi
-pause "Continue?"
 
 # ── Stage 2: Cloudflare login ─────────────────────────────────────────────
 stage "Log in to the Cloudflare account that owns jessitron.com"
-say "This opens a browser tab — approve access for the account that manages"
-say "the jessitron.com DNS zone (needed since this Worker's route lives there)."
 if npx --yes wrangler whoami >/dev/null 2>&1; then
   say "Already logged in:"
   npx --yes wrangler whoami || true
 else
+  say "This opens a browser tab — approve access for the account that manages"
+  say "the jessitron.com DNS zone (needed since this Worker's route lives there)."
   npx --yes wrangler login
+  if ! npx --yes wrangler whoami >/dev/null 2>&1; then
+    warn "Still not logged in — pausing so you can sort it out."
+    pause "Continue once login succeeded?"
+  fi
 fi
-pause "Continue once login succeeded?"
 
 # ── Stage 3: Deploy the Worker ────────────────────────────────────────────
 stage "Deploy the Worker"
