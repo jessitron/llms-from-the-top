@@ -1,5 +1,23 @@
 # Project instructions
 
+This is for a WORKSHOP. This is DEMO CODE. Do not worry about latency, resilience, or anything production-y.
+
+I do care that it's pretty cheap to run. But it doesn't need to run long. A few hours during prep, a few hours during the workshop.
+
+I care a lot about what data I can get out of it. This includes tracing. It also includes being able to save data in an ephemeral database, to make it easy to display live examples during the workshop.
+
+Architecture:
+
+locally, run code such as that in my-first-agent --> https://llms-from-the-top.jessitron.com --> some service that we implement, unnamed as yet --> llm-api on modal.app
+
+## my-first-agent
+
+This is where Jess writes the code she will hand-code live in the workshop, in different stages. Participants can download this repo and run that themselves, or write their own version.
+
+## llm-api
+
+We're using modal to run this, because it's a place we can run both a base model and a chat-trained model. The base model is tricky to find these days, and it's essential for the first step of illustrating that an LLM is a completion machine.
+
 ## Task tracking: use `yx`
 
 This project tracks work with `yx`, a git-backed TODO CLI (`yx help` for full command list). Don't use TaskCreate/TaskUpdate for durable project work — those are session-scoped. Use `yx` instead so tasks persist across sessions and machines.
