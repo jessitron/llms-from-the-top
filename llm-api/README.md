@@ -12,14 +12,22 @@ and then we can move to /v1/chat/completions later, maybe. Maybe we'll keep usin
 
 ## Deployment
 
-Using Modal.com to run a pretrained model on its infrastructure: `app.py` deploys
-[vLLM](https://docs.vllm.ai/)'s OpenAI-compatible server on a Modal GPU function.
+Using Modal.com to run pretrained models on its infrastructure: `app.py`
+deploys two [vLLM](https://docs.vllm.ai/) OpenAI-compatible servers, each its
+own Modal GPU function (so each gets its own URL):
 
-The base model is `mistralai/Mistral-7B-v0.1` — a true base model (not
-instruction-tuned), served under the name `base`, so hitting `/v1/completions`
-shows raw completion behavior rather than chat-tuned behavior. It runs on an
-A10G rather than a T4, since 7B weights don't fit in a T4's 16GB alongside
-vLLM's KV cache.
+- `mistralai/Mistral-7B-v0.1` — a true base model (not instruction-tuned),
+  served under the name `base`, so hitting `/v1/completions` shows raw
+  completion behavior rather than chat-tuned behavior.
+- `mistralai/Mistral-7B-Instruct-v0.1` — the chat-tuned sibling of the same
+  base weights, served under the name `chat`, so `/v1/chat/completions`
+  behaves like a normal chat model. Deliberately `-v0.1`, not `-v0.3`
+  (which adds function-calling support we don't want here) — same tokenizer
+  and architecture as the base model, so instruction-tuning is the only
+  variable that changed.
+
+Both run on an A10G rather than a T4, since 7B weights don't fit in a T4's
+16GB alongside vLLM's KV cache.
 
 ### One-time setup
 
@@ -44,6 +52,17 @@ curl $URL/v1/completions -H 'content-type: application/json' -d '{
 }'
 ```
 
+`modal serve` prints a separate URL per function — the chat model's is the
+one ending in `-serve-chat...modal.run`. Test it with:
+
+```
+curl $CHAT_URL/v1/chat/completions -H 'content-type: application/json' -d '{
+  "model": "chat",
+  "messages": [{"role": "user", "content": "What is the best way to learn a new programming language?"}],
+  "max_tokens": 40
+}'
+```
+
 ### Persistent deploy
 
 ```
@@ -51,15 +70,14 @@ curl $URL/v1/completions -H 'content-type: application/json' -d '{
 ./stop    # modal app stop — terminates it
 ```
 
-`./start` also sends one warm-up request right after deploying, so the GPU
-spin-up and model load happen during `./start` instead of on the first real
-caller's request.
+`./start` also sends one warm-up request to each model right after deploying,
+so the GPU spin-up and model load happen during `./start` instead of on the
+first real caller's request.
 
 Still to do:
 - ~~custom domain (`llms-from-the-top.jessitron.com`) in front of the Modal URL~~ —
   see `../edge-proxy/` (a Cloudflare Worker, since Modal's own custom domains
   need a paid plan)
-- a second, chat/instruction-tuned model for the "trained" path
 
 ## Telemetry
 

@@ -1,12 +1,14 @@
 """
-Serves Mistral-7B-v0.1 — a true base model, not instruction-tuned — behind
-vLLM's OpenAI-compatible server, deployed on Modal.
+Serves two Mistral 7B models behind vLLM's OpenAI-compatible server, each its
+own Modal function (so its own URL): a true base model and its
+instruction-tuned sibling, deployed on Modal.
 
-Because it's a base model, hit /v1/completions (raw text-in, text-out).
-There is no chat template, so /v1/chat/completions won't behave usefully here.
+The base model isn't instruction-tuned, so hit /v1/completions on it (raw
+text-in, text-out) — there's no chat template, so /v1/chat/completions won't
+behave usefully there. The chat model understands /v1/chat/completions.
 
 Deploy:   modal deploy app.py
-Dev/test: modal serve app.py   (spins up a temporary URL, tears down on Ctrl-C)
+Dev/test: modal serve app.py   (spins up temporary URLs, tears down on Ctrl-C)
 """
 
 import os
@@ -15,6 +17,8 @@ import modal
 
 MODEL_NAME = "mistralai/Mistral-7B-v0.1"
 SERVED_MODEL_NAME = "base"
+CHAT_MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.1"
+CHAT_SERVED_MODEL_NAME = "chat"
 HONEYCOMB_TRACES_ENDPOINT = "https://api.honeycomb.io/v1/traces"
 OTEL_SERVICE_NAME = "llms-from-the-top-api"
 
@@ -49,29 +53,14 @@ vllm_cache_vol = modal.Volume.from_name("llms-from-the-top-vllm-cache", create_i
 honeycomb_secret = modal.Secret.from_name("honeycomb", required_keys=["HONEYCOMB_API_KEY"])
 
 
-@app.function(
-    image=vllm_image,
-    # 7B weights in fp16/bf16 are ~14GB — doesn't fit in a T4's 16GB
-    # alongside vLLM's KV cache, so this model needs the bigger card.
-    gpu="A10G",
-    scaledown_window=15 * 60,
-    timeout=10 * 60,
-    volumes={
-        "/root/.cache/huggingface": hf_cache_vol,
-        "/root/.cache/vllm": vllm_cache_vol,
-    },
-    secrets=[honeycomb_secret],
-)
-@modal.concurrent(max_inputs=32)
-@modal.web_server(port=8000, startup_timeout=10 * 60)
-def serve():
+def _serve_vllm(model_name, served_model_name):
     import os
     import subprocess
 
     cmd = [
         "vllm", "serve",
-        MODEL_NAME,
-        "--served-model-name", SERVED_MODEL_NAME,
+        model_name,
+        "--served-model-name", served_model_name,
         "--host", "0.0.0.0",
         "--port", "8000",
         "--otlp-traces-endpoint", HONEYCOMB_TRACES_ENDPOINT,
@@ -92,3 +81,39 @@ def serve():
         "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": HONEYCOMB_TRACES_ENDPOINT,
     }
     subprocess.Popen(" ".join(cmd), shell=True, env=env)
+
+
+@app.function(
+    image=vllm_image,
+    # 7B weights in fp16/bf16 are ~14GB — doesn't fit in a T4's 16GB
+    # alongside vLLM's KV cache, so this model needs the bigger card.
+    gpu="A10G",
+    scaledown_window=15 * 60,
+    timeout=10 * 60,
+    volumes={
+        "/root/.cache/huggingface": hf_cache_vol,
+        "/root/.cache/vllm": vllm_cache_vol,
+    },
+    secrets=[honeycomb_secret],
+)
+@modal.concurrent(max_inputs=32)
+@modal.web_server(port=8000, startup_timeout=10 * 60)
+def serve():
+    _serve_vllm(MODEL_NAME, SERVED_MODEL_NAME)
+
+
+@app.function(
+    image=vllm_image,
+    gpu="A10G",
+    scaledown_window=15 * 60,
+    timeout=10 * 60,
+    volumes={
+        "/root/.cache/huggingface": hf_cache_vol,
+        "/root/.cache/vllm": vllm_cache_vol,
+    },
+    secrets=[honeycomb_secret],
+)
+@modal.concurrent(max_inputs=32)
+@modal.web_server(port=8000, startup_timeout=10 * 60)
+def serve_chat():
+    _serve_vllm(CHAT_MODEL_NAME, CHAT_SERVED_MODEL_NAME)

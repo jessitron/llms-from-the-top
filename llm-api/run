@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts a temporary Modal dev endpoint for the base-model API.
+# Starts temporary Modal dev endpoints for the base and chat model APIs.
 # Tears down when you Ctrl-C. For a persistent deployment, use `modal deploy app.py` instead.
 set -euo pipefail
 cd "$(dirname "$0")"
