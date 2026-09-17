@@ -3,3 +3,4 @@ __pycache__/
 .yaks
 .wrangler/
 node_modules/
+.ruby-lsp/last_updated
