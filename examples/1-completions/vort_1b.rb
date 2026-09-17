@@ -6,7 +6,7 @@ require 'json'
 print 'vort> '
 input = gets.chomp
 
-request = { prompt: input }
+request = { model: 'chat', prompt: input }
 response = Net::HTTP.post URI('https://llms-from-the-top.jessitron.com/v1/completions'), request.to_json, {
   "content-type": 'application/json'
 }

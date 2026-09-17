@@ -4,7 +4,7 @@ LLMs are completion machines. Given some text input, they choose something to co
 
 LLMs that are assistant-trained know how to answer questions.
 
-**Warning: pretrained LLMs provide raw predictions based on the content of the internet. They can be offensive and rude and horrible.**
+**Warning: safeguards not included. pretrained LLMs provide raw predictions based on the content of the internet. They can be horrible.**
 
 ## Do these things
 
@@ -18,6 +18,8 @@ LLMs that are assistant-trained know how to answer questions.
   - Join us for
   - What is the capital of Georgia?
   - d
+
+The model should complete 
 
 ## Workshop Completions API
 
