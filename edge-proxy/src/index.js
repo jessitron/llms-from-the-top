@@ -23,7 +23,22 @@ const handler = {
     upstream.pathname = incoming.pathname;
     upstream.search = incoming.search;
 
-    const upstreamRequest = new Request(upstream, request);
+    let upstreamRequest;
+    if (incoming.pathname === "/v1/completions" && request.method === "POST") {
+      // vLLM defaults max_tokens to the OpenAI API's own default of 16 when
+      // the client omits it, which makes completions look truncated. The
+      // workshop examples are meant to stay minimal, so default it here
+      // instead — callers can still override it by sending their own value.
+      const body = await request.json();
+      if (body.max_tokens === undefined) body.max_tokens = 100;
+      upstreamRequest = new Request(upstream, {
+        method: request.method,
+        headers: request.headers,
+        body: JSON.stringify(body),
+      });
+    } else {
+      upstreamRequest = new Request(upstream, request);
+    }
     upstreamRequest.headers.set("host", upstream.hostname);
     return fetch(upstreamRequest);
   },
