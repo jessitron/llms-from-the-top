@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=5
+TOTAL_STAGES=4
 cd "$(dirname "$0")"
 
 banner "Cloudflare Worker — llms-from-the-top.jessitron.com"
@@ -219,37 +219,22 @@ else
   fi
 fi
 
-# ── Stage 3: DNS record (dashboard, manual) ───────────────────────────────
-stage "Add the DNS record in the Cloudflare dashboard"
-say "wrangler login only grants Workers scopes, not DNS write access, so it"
-say "can't create this record for you — it's a one-time manual step."
-if dig +short llms-from-the-top.jessitron.com >/dev/null 2>&1 && \
-   [[ -n "$(dig +short llms-from-the-top.jessitron.com 2>/dev/null)" ]]; then
-  say "Found an existing DNS record for llms-from-the-top.jessitron.com — skipping."
-else
-  say "In the dashboard for the jessitron.com zone, add a DNS record:"
-  step "Type: CNAME, Name: llms-from-the-top, Target: jessitron.com, Proxy: ON (orange cloud)"
-  note "The target doesn't matter — the Worker route below intercepts the"
-  note "request before it reaches it. What matters is the record existing"
-  note "and being proxied through Cloudflare."
-  open_url "https://dash.cloudflare.com/?to=/:account/jessitron.com/dns/records"
-  pause "Added the record? Press Enter to continue."
-fi
-
-# ── Stage 4: Deploy the Worker ────────────────────────────────────────────
+# ── Stage 3: Deploy the Worker ────────────────────────────────────────────
 stage "Deploy the Worker"
-say "Publishing the Worker and attaching the route"
-say "  llms-from-the-top.jessitron.com/* → edge-proxy (from wrangler.toml)"
+say "Publishing the Worker and attaching"
+say "  llms-from-the-top.jessitron.com as a custom domain (from wrangler.toml)"
+note "wrangler.toml sets custom_domain = true, so Cloudflare provisions and"
+note "manages the DNS record itself — no dashboard step needed."
 npx --yes wrangler deploy
-note "This just attaches the route to the DNS record from the previous stage."
+note "First-time domain/cert activation can take a minute or two."
 pause "Continue?"
 
-# ── Stage 5: Smoke test ───────────────────────────────────────────────────
+# ── Stage 4: Smoke test ───────────────────────────────────────────────────
 stage "Smoke test the custom domain"
 say "Sending a tiny completion request through the new domain."
-note "A non-200 here (especially curl exit/HTTP code 000) most likely means"
-note "the DNS record from stage 3 is missing or not proxied — not that it"
-note "just needs more time. Re-check the dashboard rather than just retrying."
+note "If this returns something other than HTTP 200 right after deploying,"
+note "wait a minute for the custom domain/cert to activate and re-run just"
+note "this curl."
 http_code=$(curl -s -o /tmp/llms-from-the-top-smoketest.json -w '%{http_code}' \
   https://llms-from-the-top.jessitron.com/v1/completions \
   -H 'content-type: application/json' \

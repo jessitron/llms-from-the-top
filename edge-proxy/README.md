@@ -18,14 +18,14 @@ Modal's edge routes it correctly.
 
 1. `npm install -g wrangler` (or use `npx wrangler`)
 2. `wrangler login` — opens a browser to authorize against your Cloudflare
-   account that owns the jessitron.com zone. This grants Workers scopes only,
-   **not** DNS write access — so it can't create DNS records for you.
-3. In the Cloudflare dashboard (DNS settings for the `jessitron.com` zone),
-   add a proxied (orange-cloud) DNS record for `llms-from-the-top` — a CNAME
-   to `jessitron.com` works fine, since the Worker route intercepts the
-   request before it ever reaches that target. Without this record the
-   domain won't resolve at all (`curl`/`dig` will fail, not just be slow) —
-   it's a one-time manual step, not something that "settles" on its own.
+   account that owns the jessitron.com zone.
+
+No DNS step needed beyond that: `wrangler.toml` uses `custom_domain = true`
+on the route, which tells Cloudflare to manage the DNS record itself as a
+"Workers Custom Domain." `wrangler deploy` creates it automatically on first
+deploy — nothing to add by hand in the dashboard, and the dashboard will
+refuse to let you add a conflicting record manually once it exists ("A DNS
+record managed by Workers already exists on that host").
 
 ## Deploy
 
@@ -34,9 +34,9 @@ cd edge-proxy
 wrangler deploy
 ```
 
-This publishes the Worker and attaches the route
-`llms-from-the-top.jessitron.com/*` from `wrangler.toml`, using the DNS
-record created in step 3 above.
+This publishes the Worker and attaches
+`llms-from-the-top.jessitron.com` as a custom domain, per `wrangler.toml`.
+First deploy can take a minute or two for the domain/cert to become active.
 
 ## Test
 
