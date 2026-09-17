@@ -2,6 +2,10 @@
 
 This is for a WORKSHOP. This is DEMO CODE. Do not worry about latency, resilience, or anything production-y.
 
+The code in examples/ is maximally simple. Stuff is hard-coded instead of put into variables. I am going to type this code live so I'm going for shortness and for flow of typing. It looks strange to you, I know. Please try to preserve that style. Please do not improve it.
+
+The code in llm-api and edge-proxy is my backend code, and it is normal.
+
 I do care that it's pretty cheap to run. But it doesn't need to run long. A few hours during prep, a few hours during the workshop.
 
 I care a lot about what data I can get out of it. This includes tracing. It also includes being able to save data in an ephemeral database, to make it easy to display live examples during the workshop.
