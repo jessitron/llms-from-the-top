@@ -6,13 +6,16 @@ A Cloudflare Worker that fronts the Modal-hosted vLLM API at a friendly domain.
 
 Modal's own custom-domain feature (`custom_domains=` on the web endpoint
 decorator) requires a Team or Enterprise Modal plan. This Worker gets the
-domain working without that, and it's also the natural place to add
-request-level logic later — `x-api-key` auth, routing to a "trained" model by
-header, etc. (see the yaks nested under "custom domain" via `yx list`).
+domain working without that, and it's also the natural place to add other
+request-level logic later — `x-api-key` auth, etc. (see the yaks nested
+under "custom domain" via `yx list`).
 
-Right now it does nothing but forward every request to the Modal backend
-URL in `wrangler.toml`'s `BACKEND_URL` var, rewriting the Host header so
-Modal's edge routes it correctly.
+It forwards every request to one of two Modal backend URLs in
+`wrangler.toml` — `CHAT_BACKEND_URL` if the request body's `"model"` is
+`"chat"`, `BASE_BACKEND_URL` otherwise — rewriting the Host header so
+Modal's edge routes it correctly. `../llm-api` runs each model as its own
+Modal function/URL (see its README), so this is the seam that lets callers
+pick a model by name instead of knowing which URL serves it.
 
 ## Telemetry
 
@@ -58,9 +61,13 @@ First deploy can take a minute or two for the domain/cert to become active.
 curl https://llms-from-the-top.jessitron.com/v1/completions \
   -H 'content-type: application/json' \
   -d '{"model": "base", "prompt": "Hello", "max_tokens": 5}'
+
+curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -d '{"model": "chat", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 5}'
 ```
 
-## If the Modal backend URL changes
+## If the Modal backend URLs change
 
-Update `BACKEND_URL` in `wrangler.toml` and redeploy. The current value came
-from `modal deploy app.py`'s output in `../llm-api`.
+Update `BASE_BACKEND_URL` and/or `CHAT_BACKEND_URL` in `wrangler.toml` and
+redeploy. The current values came from `./start`'s output in `../llm-api`.
