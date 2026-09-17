@@ -8,12 +8,14 @@ This project tracks work with `yx`, a git-backed TODO CLI (`yx help` for full co
 - The yak history itself lives in git notes (`refs/notes/yaks`), not in `.yaks`, so it travels with the repo via `yx sync`.
 
 Common commands:
+
 - `yx list` — show the current tree (add `--ready` to see only actionable, unblocked yaks; `--format json` for scripting)
+- `yx show <id>` — see details/context for one yak
 - `yx add "name" [--under <parent-id>] [--context "..."]` — add a yak, optionally nested
 - `yx start <id>` — mark as in-progress (wip)
 - `yx done <id>` — mark complete
-- `yx show <id>` — see details/context for one yak
-- `yx context <id>` — view or edit a yak's freeform notes
+- `yx context <id>` — view a yak's freeform notes
+- `yx context <id> <<< "All the context" ` — write the freeform notes
 - `yx prune` — remove all done yaks (tidy up periodically)
 
 When starting a new piece of work in this repo, check `yx list --ready` first before assuming what's next. When finishing a piece of work, mark the corresponding yak `done` rather than just leaving it.
@@ -23,6 +25,8 @@ When starting a new piece of work in this repo, check `yx list --ready` first be
 Whenever you discover something that we should do, but right this instant is not the time to do it, add a yak!
 
 Whenever the user mentions something additional to do, before you start investigating, add a yak!
+
+When you want me to do something, make me a yak! Start the name with 👩🏽‍🦱 so that I can tell it's a job for a human.
 
 ## Finishing a worktree: use `scripts/merge-worktree.sh`
 
