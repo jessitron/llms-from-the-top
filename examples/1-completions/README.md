@@ -21,6 +21,8 @@ LLMs that are assistant-trained know how to answer questions.
 
 ## Workshop Completions API
 
+//TODO: agent, please fill in
+
 URI: https://llms-from-the-top.jessitron.com/v1/completions
 
 HTTP headers:
