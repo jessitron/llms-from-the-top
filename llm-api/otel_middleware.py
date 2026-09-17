@@ -118,6 +118,12 @@ async def trace_http_requests(request, call_next):
             except ValueError:
                 payload = None
             if isinstance(payload, dict):
+                if not payload.get("model"):
+                    # vLLM requires "model" on every request; default to the base
+                    # completion model so the workshop examples can omit it.
+                    payload["model"] = "base"
+                    body = json.dumps(payload).encode("utf-8")
+                    request._body = body
                 _record_request_content(span, payload)
 
         _inject_traceparent(request)
