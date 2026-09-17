@@ -15,9 +15,11 @@ and then we can move to /v1/chat/completions later, maybe. Maybe we'll keep usin
 Using Modal.com to run a pretrained model on its infrastructure: `app.py` deploys
 [vLLM](https://docs.vllm.ai/)'s OpenAI-compatible server on a Modal GPU function.
 
-The base model is `Qwen/Qwen2.5-0.5B` — a true base model (not instruction-tuned),
-served under the name `base`, so hitting `/v1/completions` shows raw completion
-behavior rather than chat-tuned behavior.
+The base model is `mistralai/Mistral-7B-v0.1` — a true base model (not
+instruction-tuned), served under the name `base`, so hitting `/v1/completions`
+shows raw completion behavior rather than chat-tuned behavior. It runs on an
+A10G rather than a T4, since 7B weights don't fit in a T4's 16GB alongside
+vLLM's KV cache.
 
 ### One-time setup
 

@@ -1,5 +1,5 @@
 """
-Serves Qwen2.5-0.5B — a true base model, not instruction-tuned — behind
+Serves Mistral-7B-v0.1 — a true base model, not instruction-tuned — behind
 vLLM's OpenAI-compatible server, deployed on Modal.
 
 Because it's a base model, hit /v1/completions (raw text-in, text-out).
@@ -13,7 +13,7 @@ import os
 
 import modal
 
-MODEL_NAME = "Qwen/Qwen2.5-0.5B"
+MODEL_NAME = "mistralai/Mistral-7B-v0.1"
 SERVED_MODEL_NAME = "base"
 HONEYCOMB_TRACES_ENDPOINT = "https://api.honeycomb.io/v1/traces"
 OTEL_SERVICE_NAME = "llms-from-the-top-api"
@@ -51,7 +51,9 @@ honeycomb_secret = modal.Secret.from_name("honeycomb", required_keys=["HONEYCOMB
 
 @app.function(
     image=vllm_image,
-    gpu="T4",
+    # 7B weights in fp16/bf16 are ~14GB — doesn't fit in a T4's 16GB
+    # alongside vLLM's KV cache, so this model needs the bigger card.
+    gpu="A10G",
     scaledown_window=15 * 60,
     timeout=10 * 60,
     volumes={
@@ -72,8 +74,6 @@ def serve():
         "--served-model-name", SERVED_MODEL_NAME,
         "--host", "0.0.0.0",
         "--port", "8000",
-        # T4 has compute capability 7.5; bfloat16 (vLLM's default) needs 8.0+.
-        "--dtype", "half",
         "--otlp-traces-endpoint", HONEYCOMB_TRACES_ENDPOINT,
         # Adds the root HTTP span (client info, prompt/completion content)
         # that vLLM's own --otlp-traces-endpoint tracer doesn't record.
