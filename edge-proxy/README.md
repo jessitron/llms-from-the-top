@@ -18,7 +18,14 @@ Modal's edge routes it correctly.
 
 1. `npm install -g wrangler` (or use `npx wrangler`)
 2. `wrangler login` — opens a browser to authorize against your Cloudflare
-   account that owns the jessitron.com zone.
+   account that owns the jessitron.com zone. This grants Workers scopes only,
+   **not** DNS write access — so it can't create DNS records for you.
+3. In the Cloudflare dashboard (DNS settings for the `jessitron.com` zone),
+   add a proxied (orange-cloud) DNS record for `llms-from-the-top` — a CNAME
+   to `jessitron.com` works fine, since the Worker route intercepts the
+   request before it ever reaches that target. Without this record the
+   domain won't resolve at all (`curl`/`dig` will fail, not just be slow) —
+   it's a one-time manual step, not something that "settles" on its own.
 
 ## Deploy
 
@@ -28,8 +35,8 @@ wrangler deploy
 ```
 
 This publishes the Worker and attaches the route
-`llms-from-the-top.jessitron.com/*` from `wrangler.toml`. First deploy can
-take a minute or two for the route/DNS to become active.
+`llms-from-the-top.jessitron.com/*` from `wrangler.toml`, using the DNS
+record created in step 3 above.
 
 ## Test
 
