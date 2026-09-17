@@ -14,11 +14,25 @@ Right now it does nothing but forward every request to the Modal backend
 URL in `wrangler.toml`'s `BACKEND_URL` var, rewriting the Host header so
 Modal's edge routes it correctly.
 
+## Telemetry
+
+Wrapped with `instrument()` from
+[`@microlabs/otel-cf-workers`](https://github.com/evanderkoogh/otel-cf-workers)
+(service `llms-from-the-top-edge-proxy`), which creates a root span per
+request and patches the global `fetch`, so the proxied request to the Modal
+backend carries a `traceparent` header automatically. `llm-api`'s
+`otel_middleware.py` extracts that header, so this span, the llm-api HTTP
+span, and vLLM's own engine span all land in one trace — see
+`../llm-api/README.md`'s Telemetry section for the rest of the chain.
+
 ## One-time setup
 
 1. `npm install -g wrangler` (or use `npx wrangler`)
 2. `wrangler login` — opens a browser to authorize against your Cloudflare
    account that owns the jessitron.com zone.
+3. `npm install` — pulls in `@microlabs/otel-cf-workers`.
+4. `wrangler secret put HONEYCOMB_API_KEY` — same Honeycomb API key used by
+   `llm-api` (see `modal secret create honeycomb ...` in `../llm-api/README.md`).
 
 No DNS step needed beyond that: `wrangler.toml` uses `custom_domain = true`
 on the route, which tells Cloudflare to manage the DNS record itself as a

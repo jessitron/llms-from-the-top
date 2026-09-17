@@ -1,6 +1,6 @@
 """
 Manual OTel instrumentation for the parts vLLM's own tracing doesn't cover:
-a root HTTP span (so we know who called and how), and the prompt/completion
+an HTTP span (so we know who called and how), and the prompt/completion
 text (vLLM's built-in tracer only ever records latency/token-count metrics,
 never content).
 
@@ -11,10 +11,16 @@ Buffers the full response body to read the completion text back out, so it
 doesn't support `stream: true` requests (the response would need to be
 forwarded chunk-by-chunk instead).
 
-We inject a `traceparent` header for the request we're about to route, so
-that vLLM's own engine span (which extracts trace context from incoming
-request headers) nests under the span this middleware creates, even though
-the two use separate TracerProvider instances.
+We extract the incoming `traceparent` header (set by edge-proxy, the
+Cloudflare Worker in front of this API) as the parent context, so this span
+joins that caller's trace instead of starting a new one. We then inject a
+fresh `traceparent` for the request we're about to route onward, so that
+vLLM's own engine span (which extracts trace context from incoming request
+headers) nests under the span this middleware creates, even though the two
+use separate TracerProviders. If there's no incoming header — a direct call
+to the Modal URL, bypassing edge-proxy — `propagate.extract` on an empty
+carrier just yields an empty context, so this span becomes the trace root,
+same as before.
 """
 
 import json
@@ -90,8 +96,14 @@ async def trace_http_requests(request, call_next):
 
     body = await request.body()
 
+    incoming_context = propagate.extract(
+        {k.decode("latin-1"): v.decode("latin-1") for k, v in request.scope.get("headers", [])}
+    )
+
     with _tracer.start_as_current_span(
-        f"{request.method} {request.url.path}", kind=SpanKind.SERVER
+        f"{request.method} {request.url.path}",
+        context=incoming_context,
+        kind=SpanKind.SERVER,
     ) as span:
         span.set_attribute("http.request.method", request.method)
         span.set_attribute("url.path", request.url.path)

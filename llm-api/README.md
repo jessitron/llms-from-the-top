@@ -64,22 +64,27 @@ Still to do:
 
 ## Telemetry
 
-Every request produces a two-span trace in Honeycomb (service
-`llms-from-the-top-api`):
+Every request produces a three-span trace, spanning two Honeycomb services:
 
-- a root **HTTP span** (`POST /v1/completions`), from `otel_middleware.py` —
-  client address, user-agent, the request body's `prompt`/`messages`
-  (`gen_ai.prompt.*`), and the response's completion text and finish reason
-  (`gen_ai.completion.*`)
-- a child **`llm_request` span**, from vLLM's own built-in tracing
+- a **root span** (`POST /v1/completions`) in `llms-from-the-top-edge-proxy`,
+  from the Cloudflare Worker in `../edge-proxy/` — see that project's README
+- a child **HTTP span** (`POST /v1/completions`) in `llms-from-the-top-api`,
+  from `otel_middleware.py` here — client address, user-agent, the request
+  body's `prompt`/`messages` (`gen_ai.prompt.*`), and the response's
+  completion text and finish reason (`gen_ai.completion.*`)
+- a grandchild **`llm_request` span**, from vLLM's own built-in tracing
   (`--otlp-traces-endpoint`) — queue time, time-to-first-token, token counts,
   and other `gen_ai.*` latency/usage attributes vLLM tracks internally
 
-vLLM's own tracer never records prompt/completion content (it's metrics-only),
-so `otel_middleware.py` fills that gap itself: it's registered via vLLM's
-`--middleware` flag (no vLLM source changes), and injects a `traceparent`
-header so its span and vLLM's `llm_request` span link into one trace even
-though each runs its own independent `TracerProvider`.
+`otel_middleware.py` extracts the `traceparent` header edge-proxy sends, so
+its span joins edge-proxy's trace instead of starting a new one (if there's
+no such header — e.g. a request straight to the Modal URL, bypassing
+edge-proxy — it falls back to being the root, as before). vLLM's own tracer
+never records prompt/completion content (it's metrics-only), so
+`otel_middleware.py` fills that gap itself: it's registered via vLLM's
+`--middleware` flag (no vLLM source changes), and injects a fresh
+`traceparent` header so its span and vLLM's `llm_request` span link into one
+trace even though each runs its own independent `TracerProvider`.
 
 One-time setup, before your first deploy:
 

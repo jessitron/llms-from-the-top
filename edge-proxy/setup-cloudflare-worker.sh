@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=4
+TOTAL_STAGES=5
 cd "$(dirname "$0")"
 
 banner "Cloudflare Worker — llms-from-the-top.jessitron.com"
@@ -219,7 +219,25 @@ else
   fi
 fi
 
-# ── Stage 3: Deploy the Worker ────────────────────────────────────────────
+# ── Stage 3: Honeycomb secret ─────────────────────────────────────────────
+stage "Set the Honeycomb API key"
+say "The Worker sends traces to Honeycomb, joining the same trace as llm-api"
+say "(see README.md's Telemetry section). It needs the same API key llm-api"
+say "uses, as a Wrangler secret (not committed — separate from wrangler.toml)."
+if npx --yes wrangler secret list 2>/dev/null | grep -q '"HONEYCOMB_API_KEY"'; then
+  say "HONEYCOMB_API_KEY secret already set."
+else
+  ask_secret HONEYCOMB_API_KEY "Honeycomb API key (same one used for 'modal secret create honeycomb'):"
+  if [[ -n "$HONEYCOMB_API_KEY" ]]; then
+    printf '%s' "$HONEYCOMB_API_KEY" | npx --yes wrangler secret put HONEYCOMB_API_KEY
+    say "${GREEN}✓ set${RESET} Wrangler secret HONEYCOMB_API_KEY"
+  else
+    warn "Skipping — set it later with: wrangler secret put HONEYCOMB_API_KEY"
+    SKIPPED+=("wrangler secret put HONEYCOMB_API_KEY")
+  fi
+fi
+
+# ── Stage 4: Deploy the Worker ────────────────────────────────────────────
 stage "Deploy the Worker"
 say "Publishing the Worker and attaching"
 say "  llms-from-the-top.jessitron.com as a custom domain (from wrangler.toml)"
@@ -229,7 +247,7 @@ npx --yes wrangler deploy
 note "First-time domain/cert activation can take a minute or two."
 pause "Continue?"
 
-# ── Stage 4: Smoke test ───────────────────────────────────────────────────
+# ── Stage 5: Smoke test ───────────────────────────────────────────────────
 stage "Smoke test the custom domain"
 say "Sending a tiny completion request through the new domain."
 note "If this returns something other than HTTP 200 right after deploying,"
