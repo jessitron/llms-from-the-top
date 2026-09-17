@@ -12,9 +12,9 @@ I care a lot about what data I can get out of it. This includes tracing. It also
 
 Architecture:
 
-locally, run code such as that in my-first-agent --> https://llms-from-the-top.jessitron.com --> some service that we implement, unnamed as yet --> llm-api on modal.app
+locally, run code such as that in my-first-agent --> https://llms-from-the-top.jessitron.com --> edge-proxy in a Cloudflare worker --> llm-api on modal.app
 
-## my-first-agent
+## examples
 
 This is where Jess writes the code she will hand-code live in the workshop, in different stages. Participants can download this repo and run that themselves, or write their own version.
 
