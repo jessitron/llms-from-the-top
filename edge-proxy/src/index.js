@@ -31,6 +31,7 @@ const handler = {
 
     let upstreamRequest;
     if (body) {
+      if (body.model === undefined) body.model = "base";
       if (incoming.pathname === "/v1/completions" && body.max_tokens === undefined) {
         // vLLM defaults max_tokens to the OpenAI API's own default of 16 when
         // the client omits it, which makes completions look truncated. The
