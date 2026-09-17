@@ -13,8 +13,6 @@ loop do
 
   request = input
   response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/completions"), request.to_json, {
-    "x-api-key": "hydro-building",
-    "use-this-model-please": "trained",
     "content-type": "application/json"
   }
   case response
