@@ -3,4 +3,4 @@
 # its containers so it stops billing GPU time.
 set -euo pipefail
 cd "$(dirname "$0")"
-modal app stop llms-from-the-top-base
+modal app stop -y llms-from-the-top-base
