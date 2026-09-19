@@ -19,7 +19,15 @@ LLMs that are assistant-trained know how to answer questions.
   - What is the capital of Georgia?
   - d
 
-The model should complete 
+The model should continue from there.
+
+The default model at my API is a base model, Mistral-7B, which is 
+
+## Now make it chat
+
+To make it answer questions, we use a different model. One trained for chat. 
+
+- Change the model from "base" to "chat" 
 
 ## Workshop Completions API
 

@@ -3,15 +3,14 @@
 require "net/http"
 require "json"
 
-puts "Hi there, #{ENV['USER']}! I'm your handy dandy assistant, Vort!"
-puts "What can I do for you today?"
+puts "What would you like to know?"
 
 loop do
   print "vort> "
   input = gets.chomp
   break if input in "exit" | "quit"
 
-  request = input
+  request = { model: "chat", prompt: input }
   response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/completions"), request.to_json, {
     "content-type": "application/json"
   }

@@ -3,6 +3,8 @@
 require 'net/http'
 require 'json'
 
+puts "What would you like to know?"
+
 print 'vort> '
 input = gets.chomp
 
