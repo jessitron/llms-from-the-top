@@ -8,7 +8,7 @@ puts "What would you like to know?"
 print 'vort> '
 input = gets.chomp
 
-request = { model: 'chat', prompt: input }
+request = { model: 'chat', prompt: "[INST] #{input} [/INST]" }
 response = Net::HTTP.post URI('https://llms-from-the-top.jessitron.com/v1/completions'), request.to_json, {
   "content-type": 'application/json'
 }
