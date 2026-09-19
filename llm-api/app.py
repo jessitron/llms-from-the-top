@@ -93,7 +93,7 @@ def _serve_vllm(model_name, served_model_name):
     # 7B weights in fp16/bf16 are ~14GB — doesn't fit in a T4's 16GB
     # alongside vLLM's KV cache, so this model needs the bigger card.
     gpu="A10G",
-    scaledown_window=15 * 60,
+    scaledown_window=30 * 60,
     timeout=10 * 60,
     volumes={
         "/root/.cache/huggingface": hf_cache_vol,
@@ -110,7 +110,7 @@ def serve():
 @app.function(
     image=vllm_image,
     gpu="A10G",
-    scaledown_window=15 * 60,
+    scaledown_window=30 * 60,
     timeout=10 * 60,
     volumes={
         "/root/.cache/huggingface": hf_cache_vol,
