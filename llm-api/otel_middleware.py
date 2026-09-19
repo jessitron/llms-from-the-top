@@ -107,6 +107,7 @@ async def trace_http_requests(request, call_next):
     ) as span:
         span.set_attribute("http.request.method", request.method)
         span.set_attribute("url.path", request.url.path)
+        span.set_attribute("modal.task_id", os.environ.get("MODAL_TASK_ID", ""))
         if request.client:
             span.set_attribute("client.address", request.client.host)
         if user_agent := request.headers.get("user-agent"):
