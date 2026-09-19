@@ -63,6 +63,11 @@ def _serve_vllm(model_name, served_model_name):
         "--served-model-name", served_model_name,
         "--host", "0.0.0.0",
         "--port", "8000",
+        # Model's default max_model_len (32768) needs more KV cache than an
+        # A10G has room for once the 7B weights are loaded, so vLLM refuses
+        # to start. Workshop requests are a few hundred tokens; this leaves
+        # plenty of cache for concurrent requests too.
+        "--max-model-len", "2048",
         "--otlp-traces-endpoint", HONEYCOMB_TRACES_ENDPOINT,
         # Adds the root HTTP span (client info, prompt/completion content)
         # that vLLM's own --otlp-traces-endpoint tracer doesn't record.
