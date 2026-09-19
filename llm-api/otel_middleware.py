@@ -1,8 +1,11 @@
 """
 Manual OTel instrumentation for the parts vLLM's own tracing doesn't cover:
-an HTTP span (so we know who called and how), and the prompt/completion
-text (vLLM's built-in tracer only ever records latency/token-count metrics,
-never content).
+an HTTP span (so we know who called and how), the prompt/completion text
+(vLLM's built-in tracer only ever records latency/token-count metrics,
+never content), and — for /v1/chat/completions — the prompt as rendered by
+the model's chat template, via a round-trip through vLLM's own /tokenize
+and /detokenize endpoints (run concurrently with the real request, so it
+doesn't add latency).
 
 Wired in via vLLM's `--middleware otel_middleware.trace_http_requests` flag
 (see app.py) — no vLLM source changes needed.
@@ -23,9 +26,11 @@ carrier just yields an empty context, so this span becomes the trace root,
 same as before.
 """
 
+import asyncio
 import json
 import os
 
+import httpx
 from opentelemetry import propagate
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
@@ -79,6 +84,38 @@ def _record_response_content(span, payload: dict) -> None:
         span.set_attribute(f"gen_ai.usage.{key}", value)
 
 
+async def _fetch_rendered_prompt(payload: dict) -> str | None:
+    """For /v1/chat/completions requests, ask vLLM's own /tokenize and
+    /detokenize endpoints to apply the model's chat template and tokenizer,
+    then decode back to text — reconstructing the exact prompt string the
+    model actually sees, not just the raw `messages` we were sent.
+    """
+    messages = payload.get("messages")
+    if not messages:
+        return None
+    try:
+        async with httpx.AsyncClient(base_url="http://localhost:8000", timeout=5.0) as client:
+            tokenize_resp = await client.post(
+                "/tokenize",
+                json={
+                    "model": payload.get("model"),
+                    "messages": messages,
+                    "add_generation_prompt": True,
+                },
+            )
+            tokenize_resp.raise_for_status()
+            tokens = tokenize_resp.json()["tokens"]
+
+            detokenize_resp = await client.post(
+                "/detokenize",
+                json={"model": payload.get("model"), "tokens": tokens},
+            )
+            detokenize_resp.raise_for_status()
+            return detokenize_resp.json()["prompt"]
+    except Exception:
+        return None
+
+
 def _inject_traceparent(request) -> None:
     injected: dict = {}
     propagate.inject(injected)
@@ -113,6 +150,7 @@ async def trace_http_requests(request, call_next):
         if user_agent := request.headers.get("user-agent"):
             span.set_attribute("user_agent.original", user_agent)
 
+        payload = None
         if body:
             try:
                 payload = json.loads(body)
@@ -123,7 +161,14 @@ async def trace_http_requests(request, call_next):
 
         _inject_traceparent(request)
 
-        response = await call_next(request)
+        if isinstance(payload, dict) and "messages" in payload:
+            rendered_prompt, response = await asyncio.gather(
+                _fetch_rendered_prompt(payload), call_next(request)
+            )
+            if rendered_prompt:
+                span.set_attribute("gen_ai.prompt.rendered", _truncate(rendered_prompt))
+        else:
+            response = await call_next(request)
         span.set_attribute("http.response.status_code", response.status_code)
         if response.status_code >= 400:
             span.set_status(Status(StatusCode.ERROR))

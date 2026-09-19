@@ -32,6 +32,9 @@ vllm_image = (
         "opentelemetry-sdk==1.27.0",
         "opentelemetry-exporter-otlp-proto-http==1.27.0",
         "opentelemetry-semantic-conventions-ai==0.4.2",
+        # otel_middleware.py uses this to call vLLM's own /tokenize and
+        # /detokenize endpoints to capture the chat-template-rendered prompt.
+        "httpx==0.27.2",
     )
     .env({
         "HF_HUB_ENABLE_HF_TRANSFER": "1",
