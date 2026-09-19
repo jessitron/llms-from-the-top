@@ -18,7 +18,7 @@ loop do
   in Net::HTTPSuccess
     completion = JSON.parse(response.body)
     assistant_message = completion.dig("choices", 0, "text")
-    prompt += assistant_message
+    prompt += "#{assistant_message}</s>"
     puts assistant_message
   else
     puts "Error: #{response.code} #{response.message}", response.body
