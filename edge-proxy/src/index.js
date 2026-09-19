@@ -54,7 +54,7 @@ const handler = {
     } catch (err) {
       if (err.name === "TimeoutError") {
         return new Response(
-          "Backend didn't respond in time — it's probably cold-starting. Try again in a bit.",
+          "Backend didn't respond in time — it's probably cold-starting. Try again in like 2 minutes.",
           { status: 504 },
         );
       }
