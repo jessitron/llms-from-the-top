@@ -44,7 +44,22 @@ const handler = {
       upstreamRequest = new Request(upstream, request);
     }
     upstreamRequest.headers.set("host", upstream.hostname);
-    return fetch(upstreamRequest);
+
+    // Cloudflare's own edge timeout (100s on this plan) is way too long to
+    // make participants wait, and still too short for a cold-starting Modal
+    // container. Fail fast instead so it's obvious to retry rather than sit
+    // in a spinner for a minute and a half.
+    try {
+      return await fetch(upstreamRequest, { signal: AbortSignal.timeout(15_000) });
+    } catch (err) {
+      if (err.name === "TimeoutError") {
+        return new Response(
+          "Backend didn't respond in time — it's probably cold-starting. Try again in a bit.",
+          { status: 504 },
+        );
+      }
+      throw err;
+    }
   },
 };
 
