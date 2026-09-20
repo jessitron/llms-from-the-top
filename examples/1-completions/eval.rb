@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 
 require 'open3'
+require 'net/http'
+require 'json'
 
 dir = __dir__
 program = ARGV[0] || "vort_1a.rb"
@@ -50,4 +52,8 @@ test_cases.each do |tc|
   grade = score >= tc[:pass_score] ? "PASS" : "FAIL"
   color = grade == "PASS" ? "\e[32m" : "\e[31m"
   puts "#{color}#{tc[:input].strip}?  #{grade}. Length: #{answer.length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}\e[0m"
+
+  Net::HTTP.post URI('https://api.honeycomb.io/1/events/llms-from-the-top-evals'), {
+    program: program, input: tc[:input], answer: answer, grade: grade, score: score, pass_score: tc[:pass_score], reasons: scoreReasons.join(', '),
+  }.to_json, { "content-type": 'application/json', "x-honeycomb-team": ENV['HONEYCOMB_API_KEY'] }
 end
