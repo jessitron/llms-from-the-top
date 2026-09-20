@@ -3,10 +3,10 @@
 require 'open3'
 
 dir = __dir__
+program = ARGV[0] || "vort_1a.rb"
 
 test_cases = [
   {
-    program: "vort_1a.rb",
     input: "Who created Haskell?\n",
     pass_score: 50,
     scoring: [
@@ -18,7 +18,6 @@ test_cases = [
     ],
   },
   {
-    program: "vort_1a.rb",
     input: "Write fizzbuzz in Ruby\n",
     pass_score: 80,
     scoring: [
@@ -32,12 +31,12 @@ test_cases = [
 ]
 
 test_cases.each do |tc|
-  output, error_output, = Open3.capture3("ruby #{dir}/#{tc[:program]}", stdin_data: tc[:input])
+  output, error_output, = Open3.capture3("ruby #{dir}/#{program}", stdin_data: tc[:input])
   answer = output.sub(/\Avort> /, '')
 
   puts answer
 
-  abort "FAIL: #{tc[:program]} wrote to stderr: #{error_output}" if !error_output.empty?
+  abort "FAIL: #{program} wrote to stderr: #{error_output}" if !error_output.empty?
 
   score = 0
   scoreReasons = []
