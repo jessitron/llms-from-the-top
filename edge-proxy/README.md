@@ -11,8 +11,8 @@ request-level logic later — `x-api-key` auth, etc. (see the yaks nested
 under "custom domain" via `yx list`).
 
 It forwards every request to one of two Modal backend URLs in
-`wrangler.toml` — `CHAT_BACKEND_URL` if the request body's `"model"` is
-`"chat"`, `BASE_BACKEND_URL` otherwise — rewriting the Host header so
+`wrangler.toml` — `BASE_BACKEND_URL` if the request body's `"model"` is
+`"base"`, `CHAT_BACKEND_URL` otherwise — rewriting the Host header so
 Modal's edge routes it correctly. `../llm-api` runs each model as its own
 Modal function/URL (see its README), so this is the seam that lets callers
 pick a model by name instead of knowing which URL serves it.
