@@ -12,26 +12,34 @@ if !error_output.empty?
   abort "FAIL: vort_1a.rb wrote to stderr: #{error_output}"
 end
 
+score = 0
+scoreReasons = []
 length = answer.length
-if !((250..600) === length)
-  abort "FAIL: output length #{length} is not between 250 and 600 characters"
+if ((250..600) === length)
+  score += 30
+  scoreReasons << "+30 Reasonable length, between 250 and 600"
 end
 
-score = 0
 if answer =~ /Simon Peyton.Jones/
   score += 40
+  scoreReasons << "+40 Found Simon Peyton.Jones"
 end
 
 if answer =~ /Wadler/
   score += 20
+  scoreReasons << "+20 Found Wadler"
 end
 
 if answer =~ /Andrew Hunt/
   score -= 40
+  scoreReasons << "-40 Found Andrew Hunt"
 end
 
 if answer =~ /🛑$/
   score += 40
+  scoreReasons << "+40 Stopped intentionally"
 end
 
-puts "PASS. Length: #{length}, Score: #{score}"
+puts "Who created Haskell?  PASS. Length: #{length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}"
+
+
