@@ -186,7 +186,14 @@ async def trace_http_requests(request, call_next):
 
         _inject_traceparent(request)
 
-        if isinstance(payload, dict) and "messages" in payload:
+        # Path check matters: this middleware also wraps our own /tokenize
+        # calls below, whose request body also contains "messages" — without
+        # it, each chat request recursively re-triggers itself via /tokenize.
+        if (
+            request.url.path == "/v1/chat/completions"
+            and isinstance(payload, dict)
+            and "messages" in payload
+        ):
             rendered_prompt, response = await asyncio.gather(
                 _fetch_rendered_prompt(payload), call_next(request)
             )
