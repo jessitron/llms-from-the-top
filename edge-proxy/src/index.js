@@ -16,6 +16,7 @@
 import { instrument } from "@microlabs/otel-cf-workers";
 
 const API_KEY = "exploreddd";
+const DEFAULT_MAX_TOKENS = 100;
 
 function checkAuth(request) {
   const key = request.headers.get("x-api-key");
@@ -54,7 +55,7 @@ const handler = {
     if (body) {
       if (body.model === undefined) body.model = "chat";
       if (incoming.pathname === "/v1/completions" && body.max_tokens === undefined) {
-        body.max_tokens = 100;
+        body.max_tokens = DEFAULT_MAX_TOKENS;
       }
       upstreamRequest = new Request(upstream, {
         method: request.method,
@@ -66,10 +67,6 @@ const handler = {
     }
     upstreamRequest.headers.set("host", upstream.hostname);
 
-    // Cloudflare's own edge timeout (100s on this plan) is way too long to
-    // make participants wait, and still too short for a cold-starting Modal
-    // container. Fail fast instead so it's obvious to retry rather than sit
-    // in a spinner for a minute and a half.
     try {
       return await fetch(upstreamRequest, { signal: AbortSignal.timeout(15_000) });
     } catch (err) {
