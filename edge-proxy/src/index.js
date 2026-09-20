@@ -16,7 +16,7 @@
 import { instrument } from "@microlabs/otel-cf-workers";
 
 const API_KEY = "exploreddd";
-const DEFAULT_MAX_TOKENS = 100;
+const DEFAULT_MAX_TOKENS = 200;
 
 function checkAuth(request) {
   const key = request.headers.get("x-api-key");
