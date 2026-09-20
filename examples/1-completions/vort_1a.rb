@@ -6,7 +6,7 @@ require 'json'
 print 'vort> '
 input = gets.chomp
 
-request = { prompt: input }
+request = { model: "chat", prompt: input }
 response = Net::HTTP.post URI('https://llms-from-the-top.jessitron.com/v1/completions'), request.to_json, {
   "content-type": 'application/json'
 }
@@ -16,5 +16,5 @@ in Net::HTTPSuccess
   assistant_message = completion.dig('choices', 0, 'text')
   puts assistant_message
 else
-  puts "Error: #{response.code} #{response.message}", response.body
+  warn "Error: #{response.code} #{response.message}", response.body
 end
