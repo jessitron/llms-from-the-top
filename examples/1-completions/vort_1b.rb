@@ -15,7 +15,13 @@ case response
 in Net::HTTPSuccess
   completion = JSON.parse(response.body)
   assistant_message = completion.dig('choices', 0, 'text')
-  puts assistant_message
+  stop_reason = completion.dig('choices', 0, 'finish_reason')
+  print assistant_message
+  if stop_reason =~ /stop/
+    puts "🛑"
+  else
+    puts "…"
+  end
 else
   puts "Error: #{response.code} #{response.message}", response.body
 end
