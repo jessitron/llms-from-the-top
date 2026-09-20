@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Deploys the "better" model API to Modal as a persistent app, separate from
+# app.py's base/chat pair.
+# Unlike ./run-better (modal serve), this returns immediately and keeps
+# running — with GPU billing — until you run ./stop-better.
+#
+# `modal deploy` returns before the container has actually started, so the
+# first real request would otherwise pay for the GPU spin-up and model load.
+# We send one warm-up request right after deploying to eat that cold start.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+deploy_log="$(mktemp)"
+trap 'rm -f "$deploy_log"' EXIT
+
+modal deploy app-better.py 2>&1 | tee "$deploy_log"
+
+# Modal names the web_server function's URL after the function (underscores
+# become hyphens) — `serve_better` -> ...-serve-better.modal.run. If this
+# doesn't match, check $deploy_log for the actual URL modal printed.
+better_url="$(grep -oE 'https://[^[:space:]]*-serve-better\.modal\.run' "$deploy_log" | head -1)"
+
+if [ -z "$better_url" ]; then
+  echo "Couldn't find the deployed URL for 'better' in modal's output; skipping warm-up request." >&2
+  exit 0
+fi
+
+echo "Warming up 'better' at $better_url (this loads the model onto the GPU, can take a few minutes)..."
+curl -sS --max-time 600 "$better_url/v1/chat/completions" \
+  -H 'content-type: application/json' \
+  -d '{"model": "better", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 1}' \
+  -o /dev/null -w 'warm-up request: HTTP %{http_code} in %{time_total}s\n'

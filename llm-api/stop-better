@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Stops the persistent Modal deployment started by ./deploy-better,
+# terminating its container so it stops billing GPU time.
+set -euo pipefail
+cd "$(dirname "$0")"
+modal app stop -y llms-from-the-top-better
