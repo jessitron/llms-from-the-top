@@ -36,11 +36,12 @@ if answer =~ /Andrew Hunt/
 end
 
 if answer =~ /🛑$/
-  score += 40
-  scoreReasons << "+40 Stopped intentionally"
+  score += 10
+  scoreReasons << "+10 Stopped intentionally"
 end
 
-puts "Who created Haskell?  PASS. Length: #{length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}"
+grade = score >= 50 ? "PASS" : "FAIL"
+puts "Who created Haskell?  #{grade}. Length: #{length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}"
 
 ## Test 2
 
@@ -77,10 +78,11 @@ if answer =~ /\b100\b/i
 end
 
 if answer =~ /🛑$/
-  score += 40
-  scoreReasons << "+40 Stopped intentionally"
+  score += 10
+  scoreReasons << "+10 Stopped intentionally"
 end
 
-puts "Who created Haskell?  PASS. Length: #{length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}"
+grade = score >= 80 ? "PASS" : "FAIL"
+puts "Write fizzbuzz in Ruby?  #{grade}. Length: #{length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}"
 
 
