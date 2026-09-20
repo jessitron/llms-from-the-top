@@ -41,10 +41,8 @@ const handler = {
     const authError = checkAuth(request);
     if (authError) return authError;
 
-    const conversationId = request.headers.get("x-conversation-id");
-    if (conversationId) {
-      trace.getActiveSpan()?.setAttribute("gen_ai.conversation.id", conversationId);
-    }
+    const conversationId = request.headers.get("x-conversation-id") || crypto.randomUUID();
+    trace.getActiveSpan()?.setAttribute("gen_ai.conversation.id", conversationId);
 
     const incoming = new URL(request.url);
 
@@ -76,6 +74,7 @@ const handler = {
       upstreamRequest = new Request(upstream, request);
     }
     upstreamRequest.headers.set("host", upstream.hostname);
+    upstreamRequest.headers.set("x-conversation-id", conversationId);
 
     try {
       return await fetch(upstreamRequest, { signal: AbortSignal.timeout(15_000) });
