@@ -56,6 +56,31 @@ _provider.add_span_processor(
 _tracer = _provider.get_tracer("llm-api.http")
 
 
+def build_otel_log_handler():
+    """Factory referenced by vllm_logging_config.json (via VLLM_LOGGING_CONFIG_PATH)
+    so vLLM's own `logging`-module log records — which is how vLLM logs, there's
+    no print() involved — get exported to Honeycomb alongside the traces above.
+    Shares the same Resource (service.name) as the trace provider so logs land
+    in the same dataset.
+    """
+    from opentelemetry._logs import set_logger_provider
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+    logger_provider = LoggerProvider(resource=_provider.resource)
+    logger_provider.add_log_record_processor(
+        BatchLogRecordProcessor(
+            OTLPLogExporter(
+                endpoint=os.environ["OTEL_EXPORTER_OTLP_LOGS_ENDPOINT"],
+                headers={"x-honeycomb-team": os.environ["HONEYCOMB_API_KEY"]},
+            )
+        )
+    )
+    set_logger_provider(logger_provider)
+    return LoggingHandler(logger_provider=logger_provider)
+
+
 def _truncate(value) -> str:
     text = str(value)
     return text if len(text) <= MAX_ATTR_LEN else text[:MAX_ATTR_LEN] + "...(truncated)"

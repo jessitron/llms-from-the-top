@@ -20,6 +20,7 @@ SERVED_MODEL_NAME = "base"
 CHAT_MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.1"
 CHAT_SERVED_MODEL_NAME = "chat"
 HONEYCOMB_TRACES_ENDPOINT = "https://api.honeycomb.io/v1/traces"
+HONEYCOMB_LOGS_ENDPOINT = "https://api.honeycomb.io/v1/logs"
 OTEL_SERVICE_NAME = "llms-from-the-top-api"
 
 vllm_image = (
@@ -44,6 +45,13 @@ vllm_image = (
     .add_local_file(
         local_path=os.path.join(os.path.dirname(__file__), "otel_middleware.py"),
         remote_path="/root/otel_middleware.py",
+    )
+    # Tells vLLM (via VLLM_LOGGING_CONFIG_PATH below) to route its own log
+    # records through otel_middleware.build_otel_log_handler in addition to
+    # stdout, so they show up in Honeycomb next to the traces.
+    .add_local_file(
+        local_path=os.path.join(os.path.dirname(__file__), "vllm_logging_config.json"),
+        remote_path="/root/vllm_logging_config.json",
     )
 )
 
@@ -87,6 +95,11 @@ def _serve_vllm(model_name, served_model_name):
         # otel_middleware.py builds its own exporter from this directly,
         # since it runs a separate TracerProvider from vLLM's own tracer.
         "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": HONEYCOMB_TRACES_ENDPOINT,
+        # Makes vLLM's own log records (it logs via stdlib `logging`, not
+        # print) flow through otel_middleware.build_otel_log_handler, which
+        # reads this endpoint directly.
+        "VLLM_LOGGING_CONFIG_PATH": "/root/vllm_logging_config.json",
+        "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": HONEYCOMB_LOGS_ENDPOINT,
     }
     subprocess.Popen(" ".join(cmd), shell=True, env=env)
 
