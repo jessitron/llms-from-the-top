@@ -66,15 +66,16 @@ curl $CHAT_URL/v1/chat/completions -H 'content-type: application/json' -d '{
 ### Persistent deploy
 
 ```
-./start   # modal deploy — stays up (and billing GPU time) until stopped
+./deploy   # modal deploy — stays up (and billing GPU time) until stopped
 ./stop    # modal app stop — terminates it
 ```
 
-`./start` also sends one warm-up request to each model right after deploying,
-so the GPU spin-up and model load happen during `./start` instead of on the
+`./deploy` also sends one warm-up request to each model right after deploying,
+so the GPU spin-up and model load happen during `./deploy` instead of on the
 first real caller's request.
 
 Still to do:
+
 - ~~custom domain (`llms-from-the-top.jessitron.com`) in front of the Modal URL~~ —
   see `../edge-proxy/` (a Cloudflare Worker, since Modal's own custom domains
   need a paid plan)
@@ -109,9 +110,10 @@ One-time setup, before your first deploy:
 modal secret create honeycomb HONEYCOMB_API_KEY=<your Honeycomb API key>
 ```
 
-That's it — `./run`, `./start`, etc. all pick it up automatically.
+That's it — `./run`, `./deploy`, etc. all pick it up automatically.
 
 Caveats:
+
 - `stream: true` requests aren't supported by the middleware (it buffers the
   full response body to read the completion text back out) — not needed for
   this workshop, so it's left unhandled rather than passed through.
