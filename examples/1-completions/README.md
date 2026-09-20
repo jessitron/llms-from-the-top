@@ -31,12 +31,32 @@ To make it answer questions, we use a different model. One trained for chat.
 
 ## Workshop Completions API
 
-//TODO: agent, please fill in
-
 URI: https://llms-from-the-top.jessitron.com/v1/completions
 
 HTTP headers:
 
-Input format:
+- `content-type: application/json`
+- `x-api-key: exploreddd`
 
-Output format:
+Input format (JSON body):
+
+```json
+{ "model": "base", "prompt": "Once upon a time, a giant" }
+```
+
+- `model` — "base" or "chat". Defaults to "chat" if omitted.
+- `prompt` — the text to continue.
+- `max_tokens` — optional, defaults to 100.
+
+Output format (JSON body, vLLM's OpenAI-compatible completions response):
+
+```json
+{
+  "choices": [
+    { "text": " ...continuation...", "finish_reason": "stop" }
+  ]
+}
+```
+
+- `choices[0].text` — the completion.
+- `choices[0].finish_reason` — why it stopped, e.g. "stop" or "length".
