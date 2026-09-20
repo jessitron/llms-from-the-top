@@ -19,15 +19,19 @@ end
 
 score = 0
 if answer =~ /Simon Peyton.Jones/
-  score += 50
+  score += 40
 end
 
 if answer =~ /Wadler/
-  score += 50
+  score += 20
 end
 
 if answer =~ /Andrew Hunt/
   score -= 40
+end
+
+if answer =~ /🛑$/
+  score += 40
 end
 
 puts "PASS. Length: #{length}, Score: #{score}"
