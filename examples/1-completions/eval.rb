@@ -48,5 +48,6 @@ test_cases.each do |tc|
   end
 
   grade = score >= tc[:pass_score] ? "PASS" : "FAIL"
-  puts "#{tc[:input].strip}?  #{grade}. Length: #{answer.length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}"
+  color = grade == "PASS" ? "\e[32m" : "\e[31m"
+  puts "#{color}#{tc[:input].strip}?  #{grade}. Length: #{answer.length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}\e[0m"
 end
