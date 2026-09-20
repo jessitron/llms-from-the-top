@@ -2,9 +2,8 @@
  * Front door for llms-from-the-top.jessitron.com.
  *
  * Routes to one of two Modal-hosted vLLM backends (base or chat model) by
- * the request body's `model` field, defaulting to the chat model. It's the
- * seam where other request-level logic (x-api-key auth, etc.) gets added
- * later — see the yaks nested under "custom domain" in this repo's `yx list`.
+ * the request body's `model` field, defaulting to the chat model. Requires
+ * an `x-api-key: exploreddd` header — see checkAuth below.
  *
  * Wrapped with `instrument()` from @microlabs/otel-cf-workers (Honeycomb's
  * recommended Workers OTel library — it doesn't need Node polyfills, unlike
@@ -16,8 +15,30 @@
  */
 import { instrument } from "@microlabs/otel-cf-workers";
 
+const API_KEY = "exploreddd";
+
+function checkAuth(request) {
+  const key = request.headers.get("x-api-key");
+  if (key === null) {
+    return new Response(
+      "Unauthorized: missing x-api-key header. Ask Jess for the value.",
+      { status: 401 },
+    );
+  }
+  if (key !== API_KEY) {
+    return new Response(
+      "Unauthorized: wrong x-api-key value. Ask Jess for the right value.",
+      { status: 401 },
+    );
+  }
+  return null;
+}
+
 const handler = {
   async fetch(request, env) {
+    const authError = checkAuth(request);
+    if (authError) return authError;
+
     const incoming = new URL(request.url);
 
     let body;

@@ -8,7 +8,8 @@ input = gets.chomp
 
 request = { model: "chat", prompt: input }
 response = Net::HTTP.post URI('https://llms-from-the-top.jessitron.com/v1/completions'), request.to_json, {
-  "content-type": 'application/json'
+  "content-type": 'application/json',
+  "x-api-key": 'exploreddd'
 }
 case response
 in Net::HTTPSuccess
