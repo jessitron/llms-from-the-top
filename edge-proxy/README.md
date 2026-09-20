@@ -18,6 +18,14 @@ otherwise — rewriting the Host header so Modal's edge routes it correctly.
 README), so this is the seam that lets callers pick a model by name
 instead of knowing which URL serves it.
 
+`"model": "haiku"` is the odd one out: instead of a Modal backend, it calls
+the real Anthropic API (`claude-haiku-4-5-20251001`) directly, translating
+between the OpenAI-shaped `/v1/chat/completions` request/response the
+examples use and Anthropic's Messages API shape. It's a workshop backup in
+case Modal is misbehaving — Modal is the point of the workshop (cold
+starts and all), but a "just works" fallback is worth having. Only
+`/v1/chat/completions` is supported for it.
+
 ## Telemetry
 
 Wrapped with `instrument()` from
@@ -37,6 +45,8 @@ span, and vLLM's own engine span all land in one trace — see
 3. `npm install` — pulls in `@microlabs/otel-cf-workers`.
 4. `wrangler secret put HONEYCOMB_API_KEY` — same Honeycomb API key used by
    `llm-api` (see `modal secret create honeycomb ...` in `../llm-api/README.md`).
+5. `wrangler secret put ANTHROPIC_API_KEY` — an Anthropic API key, used
+   only for the `"model": "haiku"` backup route.
 
 No DNS step needed beyond that: `wrangler.toml` uses `custom_domain = true`
 on the route, which tells Cloudflare to manage the DNS record itself as a
@@ -70,6 +80,10 @@ curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
 curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
   -H 'content-type: application/json' \
   -d '{"model": "better", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 5}'
+
+curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -d '{"model": "haiku", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 5}'
 ```
 
 ## If the Modal backend URLs change
