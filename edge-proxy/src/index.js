@@ -13,9 +13,11 @@
  * that's what lets this span and llm-api's `otel_middleware.py` span (which
  * now extracts that header, see its docstring) land in the same trace.
  *
- * gen_ai.conversation.id is carried as OTel Baggage rather than a plain
- * header, via the W3C `baggage` header (also patched onto the outgoing
- * fetch automatically, same as `traceparent`). Baggage lives on the active
+ * gen_ai.conversation.id and gen_ai.agent.name (from the caller's
+ * x-conversation-id / x-agent-name headers, the latter defaulting to
+ * "vort") are carried as OTel Baggage rather than plain headers, via the
+ * W3C `baggage` header (also patched onto the outgoing fetch automatically,
+ * same as `traceparent`). Baggage lives on the active
  * context rather than one span, so BaggageSpanProcessor below can stamp it
  * (and any other baggage entry) onto every span this worker creates after
  * baggage is set — and llm-api's own baggage span processor does the same
@@ -115,11 +117,14 @@ const handler = {
     if (authError) return authError;
 
     const conversationId = request.headers.get("x-conversation-id") || crypto.randomUUID();
+    const agentName = request.headers.get("x-agent-name") || "vort";
     const baggage = propagation.createBaggage({
       "gen_ai.conversation.id": { value: conversationId },
+      "gen_ai.agent.name": { value: agentName },
     });
     const ctxWithBaggage = propagation.setBaggage(context.active(), baggage);
     trace.getActiveSpan()?.setAttribute("gen_ai.conversation.id", conversationId);
+    trace.getActiveSpan()?.setAttribute("gen_ai.agent.name", agentName);
 
     return context.with(ctxWithBaggage, () => routeToBackend(request, env));
   },
