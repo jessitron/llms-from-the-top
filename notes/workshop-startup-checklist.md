@@ -11,8 +11,14 @@ cd llm-api
 
 - Deploys `mistralai/Mistral-7B-v0.1` (`base`) and
   `mistralai/Mistral-7B-Instruct-v0.1` (`chat`), each on its own A10G.
-- Sends a warm-up request to each so the GPU spin-up/model load happens now,
-  not on the first participant's request.
+- Sends a warm-up request to `chat` only, so the GPU spin-up/model load
+  happens now, not on the first participant's request. `base` is *not*
+  warmed up automatically — it isn't always used in a given session.
+- If this session will use the base model (stage `1-completions`), warm it
+  up manually before the workshop by running `vort_1a.rb` once:
+  `ruby examples/1-completions/vort_1a.rb` (type anything at the `vort>`
+  prompt). This sends a real request through the full stack
+  (edge-proxy → llm-api) and eats the cold start.
 - Stop with `./stop` when done (both models together).
 
 ## 2. better model (`llm-api/app-better.py`)

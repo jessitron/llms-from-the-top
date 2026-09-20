@@ -5,8 +5,10 @@
 #
 # `modal deploy` returns before the containers have actually started, so the
 # first real request would otherwise pay for the GPU spin-up and model load.
-# We send one warm-up request to each right after deploying to eat that cold
-# start.
+# We send one warm-up request to the chat model right after deploying to eat
+# that cold start. The base model is NOT warmed up here — it isn't always
+# used, so we only warm it manually when we know we need it (see
+# notes/workshop-startup-checklist.md).
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -19,7 +21,6 @@ modal deploy app.py 2>&1 | tee "$deploy_log"
 # become hyphens) — `serve` -> ...-serve.modal.run, `serve_chat` ->
 # ...-serve-chat.modal.run. If this doesn't match, check $deploy_log for the
 # actual URLs modal printed.
-base_url="$(grep -oE 'https://[^[:space:]]*-serve\.modal\.run' "$deploy_log" | head -1)"
 chat_url="$(grep -oE 'https://[^[:space:]]*-serve-chat\.modal\.run' "$deploy_log" | head -1)"
 
 warm_up() {
@@ -35,5 +36,4 @@ warm_up() {
     -o /dev/null -w 'warm-up request: HTTP %{http_code} in %{time_total}s\n'
 }
 
-warm_up "$base_url" "base" "/v1/completions" '{"model": "base", "prompt": "Hello", "max_tokens": 1}'
 warm_up "$chat_url" "chat" "/v1/chat/completions" '{"model": "chat", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 1}'
