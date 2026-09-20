@@ -1,0 +1,26 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "vllm": {
+            "format": "%(asctime)s %(levelname)s %(name)s: %(message)s"
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "vllm",
+            "stream": "ext://sys.stdout"
+        },
+        "otel": {
+            "()": "otel_middleware.build_otel_log_handler"
+        }
+    },
+    "loggers": {
+        "vllm": {
+            "handlers": ["console", "otel"],
+            "level": "INFO",
+            "propagate": false
+        }
+    }
+}
