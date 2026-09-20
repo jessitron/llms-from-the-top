@@ -11,9 +11,9 @@ test_cases = [
     pass_score: 50,
     scoring: [
       ->(answer) { [30, "Reasonable length, between 250 and 600"] if (250..600) === answer.length },
-      ->(answer) { [40, "Found Simon Peyton.Jones"] if answer =~ /Simon Peyton.Jones/ },
+      ->(answer) { [40, "Found Simon Peyton.Jones 😎"] if answer =~ /Simon Peyton.Jones/ },
       ->(answer) { [20, "Found Wadler"] if answer =~ /Wadler/ },
-      ->(answer) { [-40, "Found Andrew Hunt"] if answer =~ /Andrew Hunt/ },
+      ->(answer) { [-40, "Found Andrew Hunt 😡"] if answer =~ /Andrew Hunt/ },
       ->(answer) { [10, "Stopped intentionally"] if answer =~ /🛑$/ },
     ],
   },
