@@ -13,8 +13,21 @@ if !error_output.empty?
 end
 
 length = answer.length
-if length < 250 || length > 600
+if !((250..600) === length)
   abort "FAIL: output length #{length} is not between 250 and 600 characters"
 end
 
-puts "PASS: got a #{length}-character answer"
+score = 0
+if answer =~ /Simon Peyton.Jones/
+  score += 50
+end
+
+if answer =~ /Wadler/
+  score += 50
+end
+
+if answer =~ /Andrew Hunt/
+  score -= 40
+end
+
+puts "PASS. Length: #{length}, Score: #{score}"
