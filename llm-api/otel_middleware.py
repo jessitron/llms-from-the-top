@@ -48,6 +48,11 @@ from opentelemetry.trace import SpanKind, Status, StatusCode
 
 MAX_ATTR_LEN = 4000
 
+OPERATION_NAMES = {
+    "/v1/chat/completions": "chat",
+    "/v1/completions": "text_completion",
+}
+
 
 class BaggageSpanProcessor(SpanProcessor):
     def on_start(self, span, parent_context=None):
@@ -185,6 +190,8 @@ async def trace_http_requests(request, call_next):
     ) as span:
         span.set_attribute("http.request.method", request.method)
         span.set_attribute("url.path", request.url.path)
+        if operation_name := OPERATION_NAMES.get(request.url.path):
+            span.set_attribute("gen_ai.operation.name", operation_name)
         span.set_attribute("modal.task_id", os.environ.get("MODAL_TASK_ID", ""))
         if request.client:
             span.set_attribute("client.address", request.client.host)
