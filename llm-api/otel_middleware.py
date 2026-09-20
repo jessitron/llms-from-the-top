@@ -24,6 +24,14 @@ use separate TracerProviders. If there's no incoming header — a direct call
 to the Modal URL, bypassing edge-proxy — `propagate.extract` on an empty
 carrier just yields an empty context, so this span becomes the trace root,
 same as before.
+
+gen_ai.conversation.id rides along as OTel Baggage (the W3C `baggage`
+header) rather than a plain header — edge-proxy sets it there.
+`propagate.extract` picks up baggage the same way it picks up traceparent
+(OTel's default global propagator handles both), and BaggageSpanProcessor
+below copies every baggage entry onto every span this provider creates —
+not just the root HTTP span — mirroring the BaggageSpanProcessor edge-proxy
+runs on its own TracerProvider.
 """
 
 import asyncio
@@ -31,20 +39,28 @@ import json
 import os
 
 import httpx
-from opentelemetry import propagate
+from opentelemetry import baggage, propagate
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
 MAX_ATTR_LEN = 4000
+
+
+class BaggageSpanProcessor(SpanProcessor):
+    def on_start(self, span, parent_context=None):
+        for key, value in baggage.get_all(parent_context).items():
+            span.set_attribute(key, value)
+
 
 _provider = TracerProvider(
     resource=Resource.create(
         {"service.name": os.environ.get("OTEL_SERVICE_NAME", "llms-from-the-top-api")}
     )
 )
+_provider.add_span_processor(BaggageSpanProcessor())
 _provider.add_span_processor(
     BatchSpanProcessor(
         OTLPSpanExporter(
@@ -174,8 +190,6 @@ async def trace_http_requests(request, call_next):
             span.set_attribute("client.address", request.client.host)
         if user_agent := request.headers.get("user-agent"):
             span.set_attribute("user_agent.original", user_agent)
-        if conversation_id := request.headers.get("x-conversation-id"):
-            span.set_attribute("gen_ai.conversation.id", conversation_id)
 
         payload = None
         if body:
