@@ -3,13 +3,13 @@
 require 'open3'
 
 dir = __dir__
-output, = Open3.capture2("ruby #{dir}/vort_1a.rb", stdin_data: "Who created Haskell?\n")
+output, error_output, = Open3.capture3("ruby #{dir}/vort_1a.rb", stdin_data: "Who created Haskell?\n")
 answer = output.sub(/\Avort> /, '')
 
 puts answer
 
-if answer.match?(/error/i)
-  abort "FAIL: output looks like an error"
+if !error_output.empty?
+  abort "FAIL: vort_1a.rb wrote to stderr: #{error_output}"
 end
 
 length = answer.length

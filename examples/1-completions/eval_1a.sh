@@ -2,13 +2,16 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-output=$(echo "Who created Haskell?" | ruby vort_1a.rb)
+err=$(mktemp)
+output=$(echo "Who created Haskell?" | ruby vort_1a.rb 2>"$err")
 answer="${output#vort> }"
+error_output=$(cat "$err")
+rm -f "$err"
 
 echo "$answer"
 
-if echo "$answer" | grep -qi "error"; then
-  echo "FAIL: output looks like an error" >&2
+if [ -n "$error_output" ]; then
+  echo "FAIL: vort_1a.rb wrote to stderr: $error_output" >&2
   exit 1
 fi
 
