@@ -174,6 +174,8 @@ async def trace_http_requests(request, call_next):
             span.set_attribute("client.address", request.client.host)
         if user_agent := request.headers.get("user-agent"):
             span.set_attribute("user_agent.original", user_agent)
+        if conversation_id := request.headers.get("x-conversation-id"):
+            span.set_attribute("gen_ai.conversation.id", conversation_id)
 
         payload = None
         if body:

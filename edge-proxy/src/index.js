@@ -14,6 +14,7 @@
  * now extracts that header, see its docstring) land in the same trace.
  */
 import { instrument } from "@microlabs/otel-cf-workers";
+import { trace } from "@opentelemetry/api";
 
 const API_KEY = "exploreddd";
 const DEFAULT_MAX_TOKENS = 200;
@@ -39,6 +40,11 @@ const handler = {
   async fetch(request, env) {
     const authError = checkAuth(request);
     if (authError) return authError;
+
+    const conversationId = request.headers.get("x-conversation-id");
+    if (conversationId) {
+      trace.getActiveSpan()?.setAttribute("gen_ai.conversation.id", conversationId);
+    }
 
     const incoming = new URL(request.url);
 
