@@ -17,12 +17,15 @@
  * header, via the W3C `baggage` header (also patched onto the outgoing
  * fetch automatically, same as `traceparent`). Baggage lives on the active
  * context rather than one span, so BaggageSpanProcessor below can stamp it
- * (and any other baggage entry) onto every span this worker creates, not
- * just the root one — and llm-api's own baggage span processor does the
- * same for every span it creates.
+ * (and any other baggage entry) onto every span this worker creates after
+ * baggage is set — and llm-api's own baggage span processor does the same
+ * for every span it creates. `instrument()` itself starts the root span
+ * before calling `handler.fetch` below, i.e. before we've set baggage, so
+ * BaggageSpanProcessor's onStart runs too early to catch that one span —
+ * hence the direct `setAttribute` call on the active (root) span too.
  */
 import { instrument, OTLPExporter, BatchTraceSpanProcessor } from "@microlabs/otel-cf-workers";
-import { context, propagation } from "@opentelemetry/api";
+import { context, propagation, trace } from "@opentelemetry/api";
 import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from "@opentelemetry/core";
 
 const API_KEY = "exploreddd";
@@ -116,6 +119,7 @@ const handler = {
       "gen_ai.conversation.id": { value: conversationId },
     });
     const ctxWithBaggage = propagation.setBaggage(context.active(), baggage);
+    trace.getActiveSpan()?.setAttribute("gen_ai.conversation.id", conversationId);
 
     return context.with(ctxWithBaggage, () => routeToBackend(request, env));
   },
