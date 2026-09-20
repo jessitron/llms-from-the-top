@@ -42,4 +42,45 @@ end
 
 puts "Who created Haskell?  PASS. Length: #{length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}"
 
+## Test 2
+
+output, error_output, = Open3.capture3("ruby #{dir}/vort_1a.rb", stdin_data: "Write fizzbuzz in Ruby\n")
+answer = output.sub(/\Avort> /, '')
+
+puts answer
+
+if !error_output.empty?
+  abort "FAIL: vort_1a.rb wrote to stderr: #{error_output}"
+end
+
+score = 0
+scoreReasons = []
+length = answer.length
+if ((250..600) === length)
+  score += 30
+  scoreReasons << "+30 Reasonable length, between 250 and 600"
+end
+
+if answer =~ /\b3\b/i
+  score += 40
+  scoreReasons << "+30 Found the number 3"
+end
+
+if answer =~ /\b5\b/i
+  score += 40
+  scoreReasons << "+30 Found the number 5"
+end
+
+if answer =~ /\b100\b/i
+  score += 40
+  scoreReasons << "+30 Found the number 100"
+end
+
+if answer =~ /🛑$/
+  score += 40
+  scoreReasons << "+40 Stopped intentionally"
+end
+
+puts "Who created Haskell?  PASS. Length: #{length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}"
+
 
