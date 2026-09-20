@@ -10,12 +10,13 @@ domain working without that, and it's also the natural place to add other
 request-level logic later — `x-api-key` auth, etc. (see the yaks nested
 under "custom domain" via `yx list`).
 
-It forwards every request to one of two Modal backend URLs in
+It forwards every request to one of three Modal backend URLs in
 `wrangler.toml` — `BASE_BACKEND_URL` if the request body's `"model"` is
-`"base"`, `CHAT_BACKEND_URL` otherwise — rewriting the Host header so
-Modal's edge routes it correctly. `../llm-api` runs each model as its own
-Modal function/URL (see its README), so this is the seam that lets callers
-pick a model by name instead of knowing which URL serves it.
+`"base"`, `BETTER_BACKEND_URL` if it's `"better"`, `CHAT_BACKEND_URL`
+otherwise — rewriting the Host header so Modal's edge routes it correctly.
+`../llm-api` runs each model as its own Modal function/URL (see its
+README), so this is the seam that lets callers pick a model by name
+instead of knowing which URL serves it.
 
 ## Telemetry
 
@@ -65,9 +66,14 @@ curl https://llms-from-the-top.jessitron.com/v1/completions \
 curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
   -H 'content-type: application/json' \
   -d '{"model": "chat", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 5}'
+
+curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -d '{"model": "better", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 5}'
 ```
 
 ## If the Modal backend URLs change
 
-Update `BASE_BACKEND_URL` and/or `CHAT_BACKEND_URL` in `wrangler.toml` and
-redeploy. The current values came from `./start`'s output in `../llm-api`.
+Update `BASE_BACKEND_URL`, `CHAT_BACKEND_URL`, and/or `BETTER_BACKEND_URL`
+in `wrangler.toml` and redeploy. The base/chat values came from `./deploy`'s
+output in `../llm-api`, and the better value from `./deploy-better`'s.

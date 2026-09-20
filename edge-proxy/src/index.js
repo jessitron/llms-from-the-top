@@ -1,9 +1,9 @@
 /**
  * Front door for llms-from-the-top.jessitron.com.
  *
- * Routes to one of two Modal-hosted vLLM backends (base or chat model) by
- * the request body's `model` field, defaulting to the chat model. Requires
- * an `x-api-key: exploreddd` header — see checkAuth below.
+ * Routes to one of three Modal-hosted vLLM backends (base, chat, or better
+ * model) by the request body's `model` field, defaulting to the chat model.
+ * Requires an `x-api-key: exploreddd` header — see checkAuth below.
  *
  * Wrapped with `instrument()` from @microlabs/otel-cf-workers (Honeycomb's
  * recommended Workers OTel library — it doesn't need Node polyfills, unlike
@@ -46,7 +46,11 @@ const handler = {
     if (request.method === "POST") body = await request.json();
 
     const backendUrl =
-      body?.model === "base" ? env.BASE_BACKEND_URL : env.CHAT_BACKEND_URL;
+      body?.model === "base"
+        ? env.BASE_BACKEND_URL
+        : body?.model === "better"
+          ? env.BETTER_BACKEND_URL
+          : env.CHAT_BACKEND_URL;
     const upstream = new URL(backendUrl);
     upstream.pathname = incoming.pathname;
     upstream.search = incoming.search;
