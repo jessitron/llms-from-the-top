@@ -12,7 +12,7 @@ I care a lot about what data I can get out of it. This includes tracing. It also
 
 Architecture:
 
-locally, run code such as that in my-first-agent --> https://llms-from-the-top.jessitron.com --> edge-proxy in a Cloudflare worker --> llm-api on modal.app
+locally, run code such as that in examples/ (agent harness) --> https://llms-from-the-top.jessitron.com served by edge-proxy in a Cloudflare worker (model provider gteway) --> llm-api on modal.app (inference server)
 
 ## examples
 
