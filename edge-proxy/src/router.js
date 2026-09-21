@@ -310,7 +310,12 @@ export async function routeToAnthropic(body, incoming, env) {
   });
 }
 
-const OPENAI_MODEL = "gpt-4o-mini";
+// Model aliases that proxy straight through to OpenAI's own
+// /v1/chat/completions (no translation needed, see below).
+const OPENAI_MODELS = {
+  luna: "gpt-4o-mini",
+  nano: "gpt-4.1-nano",
+};
 
 // Unlike Anthropic's Messages API, OpenAI's /v1/chat/completions already
 // matches the OpenAI-shaped request/response this proxy speaks — messages,
@@ -318,9 +323,10 @@ const OPENAI_MODEL = "gpt-4o-mini";
 // unchanged. So there's no translation step here, just a model swap, auth,
 // and the same gen_ai.* telemetry as routeToBackend below.
 export async function routeToOpenAI(body, incoming, env) {
+  const openAiModel = OPENAI_MODELS[body.model];
   if (incoming.pathname !== "/v1/chat/completions") {
     return new Response(
-      `model "luna" only supports /v1/chat/completions, got ${incoming.pathname}`,
+      `model "${body.model}" only supports /v1/chat/completions, got ${incoming.pathname}`,
       { status: 400 },
     );
   }
@@ -328,7 +334,7 @@ export async function routeToOpenAI(body, incoming, env) {
   const span = trace.getActiveSpan();
   span?.setAttribute("gen_ai.operation.name", "chat");
   span?.setAttribute("gen_ai.provider.name", "openai");
-  span?.setAttribute("gen_ai.request.model", OPENAI_MODEL);
+  span?.setAttribute("gen_ai.request.model", openAiModel);
   span?.setAttribute("app.raw_input_messages", JSON.stringify(body.messages));
   span?.setAttribute("gen_ai.input.messages", genAiInputMessages(body.messages));
   const lastInput = lastUserInputText(body.messages);
@@ -343,7 +349,7 @@ export async function routeToOpenAI(body, incoming, env) {
       "content-type": "application/json",
       authorization: `Bearer ${env.OPENAI_API_KEY}`,
     },
-    body: JSON.stringify({ ...body, model: OPENAI_MODEL }),
+    body: JSON.stringify({ ...body, model: openAiModel }),
   });
   if (!response.ok) return response;
 
@@ -366,7 +372,7 @@ export async function routeToOpenAI(body, incoming, env) {
   return Response.json(openAiResponse, { status: response.status });
 }
 
-export const VALID_MODELS = ["base", "chat", "better", "haiku", "luna"];
+export const VALID_MODELS = ["base", "chat", "better", "haiku", "luna", "nano"];
 
 export async function routeToBackend(request, env) {
   const incoming = new URL(request.url);
@@ -417,7 +423,7 @@ export async function routeToBackend(request, env) {
   }
 
   if (body?.model === "haiku") return routeToAnthropic(body, incoming, env);
-  if (body?.model === "luna") return routeToOpenAI(body, incoming, env);
+  if (body?.model === "luna" || body?.model === "nano") return routeToOpenAI(body, incoming, env);
 
   const span = trace.getActiveSpan();
   const isChat = incoming.pathname === "/v1/chat/completions" && body?.messages !== undefined;

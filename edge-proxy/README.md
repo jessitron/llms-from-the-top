@@ -18,19 +18,23 @@ otherwise — rewriting the Host header so Modal's edge routes it correctly.
 README), so this is the seam that lets callers pick a model by name
 instead of knowing which URL serves it.
 
-`"model": "haiku"` and `"model": "luna"` are the odd ones out: instead of a
-Modal backend, they call the real Anthropic and OpenAI APIs directly.
-They're workshop backups in case Modal is misbehaving — Modal is the point
-of the workshop (cold starts and all), but a "just works" fallback is worth
-having. Only `/v1/chat/completions` is supported for either.
+`"model": "haiku"`, `"model": "luna"`, and `"model": "nano"` are the odd
+ones out: instead of a Modal backend, they call the real Anthropic and
+OpenAI APIs directly. `"haiku"` and `"luna"` are workshop backups in case
+Modal is misbehaving — Modal is the point of the workshop (cold starts and
+all), but a "just works" fallback is worth having. `"nano"` is a
+deliberately weak model, for demoing what a model struggling with tool use
+and small coding tasks looks like. Only `/v1/chat/completions` is supported
+for any of these three.
 
 `"haiku"` calls Anthropic's Messages API (`claude-haiku-4-5-20251001`),
 translating between the OpenAI-shaped `/v1/chat/completions` request/response
 the examples use and Anthropic's Messages API shape.
 
-`"luna"` calls OpenAI's API (`gpt-4o-mini`) directly at
-`/v1/chat/completions` — no translation needed, since OpenAI's request and
-response shapes already match what this proxy speaks.
+`"luna"` and `"nano"` call OpenAI's API directly at `/v1/chat/completions`
+— no translation needed, since OpenAI's request and response shapes already
+match what this proxy speaks. `"luna"` maps to `gpt-4o-mini`, `"nano"` to
+`gpt-4.1-nano`; both use the same `OPENAI_API_KEY` secret.
 
 ## Telemetry
 
@@ -53,8 +57,9 @@ span, and vLLM's own engine span all land in one trace — see
    `llm-api` (see `modal secret create honeycomb ...` in `../llm-api/README.md`).
 5. `wrangler secret put ANTHROPIC_API_KEY` — an Anthropic API key, used
    only for the `"model": "haiku"` backup route.
-6. `wrangler secret put OPENAI_API_KEY` — an OpenAI API key, used only for
-   the `"model": "luna"` backup route.
+6. `wrangler secret put OPENAI_API_KEY` — an OpenAI API key, used for the
+   `"model": "luna"` backup route and the `"model": "nano"` weak-model demo
+   route.
 
 No DNS step needed beyond that: `wrangler.toml` uses `custom_domain = true`
 on the route, which tells Cloudflare to manage the DNS record itself as a
@@ -96,6 +101,10 @@ curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
 curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
   -H 'content-type: application/json' \
   -d '{"model": "luna", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 5}'
+
+curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -d '{"model": "nano", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 5}'
 ```
 
 ## If the Modal backend URLs change

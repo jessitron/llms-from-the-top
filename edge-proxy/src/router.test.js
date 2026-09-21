@@ -143,6 +143,22 @@ describe("routeToBackend", () => {
     expect(url).toBe("https://api.openai.com/v1/chat/completions");
   });
 
+  it("routes model: nano to OpenAI's gpt-4.1-nano instead of a Modal backend", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        model: "gpt-4.1-nano",
+        choices: [{ message: { role: "assistant", content: "hi" }, finish_reason: "stop" }],
+      }),
+    );
+    await routeToBackend(
+      request("/v1/chat/completions", { body: { model: "nano", messages: [{ role: "user", content: "hi" }] } }),
+      env,
+    );
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.openai.com/v1/chat/completions");
+    expect(JSON.parse(init.body).model).toBe("gpt-4.1-nano");
+  });
+
   it("fills in a default max_tokens on /v1/completions", async () => {
     await routeToBackend(request("/v1/completions", { body: { prompt: "hi" } }), env);
     const [upstreamRequest] = fetchMock.mock.calls[0];
@@ -606,7 +622,7 @@ describe("routeToOpenAI", () => {
   });
 
   it("only supports /v1/chat/completions", async () => {
-    const body = { messages: [{ role: "user", content: "hi" }] };
+    const body = { model: "luna", messages: [{ role: "user", content: "hi" }] };
     const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/completions");
     const res = await routeToOpenAI(body, incoming, env);
     expect(res.status).toBe(400);
@@ -627,7 +643,7 @@ describe("routeToOpenAI", () => {
   });
 
   it("returns the OpenAI response body unchanged", async () => {
-    const body = { messages: [{ role: "user", content: "hi" }] };
+    const body = { model: "luna", messages: [{ role: "user", content: "hi" }] };
     const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
     const res = await routeToOpenAI(body, incoming, env);
     const json = await res.json();
@@ -639,14 +655,14 @@ describe("routeToOpenAI", () => {
 
   it("passes through a non-ok response from OpenAI unchanged", async () => {
     fetchMock.mockResolvedValue(new Response("rate limited", { status: 429 }));
-    const body = { messages: [{ role: "user", content: "hi" }] };
+    const body = { model: "luna", messages: [{ role: "user", content: "hi" }] };
     const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
     const res = await routeToOpenAI(body, incoming, env);
     expect(res.status).toBe(429);
   });
 
   it("sets gen_ai input/output message attributes", async () => {
-    const body = { messages: [{ role: "user", content: "hi" }] };
+    const body = { model: "luna", messages: [{ role: "user", content: "hi" }] };
     const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
     await routeToOpenAI(body, incoming, env);
 
@@ -668,6 +684,7 @@ describe("routeToOpenAI", () => {
 
   it("sets gen_ai.tool.definitions from the OpenAI tools array", async () => {
     const body = {
+      model: "luna",
       messages: [{ role: "user", content: "what's the weather?" }],
       tools: [
         {
@@ -711,7 +728,7 @@ describe("routeToOpenAI", () => {
         ],
       }),
     );
-    const body = { messages: [{ role: "user", content: "what's the weather in Chicago?" }] };
+    const body = { model: "luna", messages: [{ role: "user", content: "what's the weather in Chicago?" }] };
     const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
     await routeToOpenAI(body, incoming, env);
 
