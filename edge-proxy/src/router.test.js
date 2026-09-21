@@ -565,6 +565,7 @@ describe("routeToAnthropic", () => {
       },
       { role: "user", parts: [{ type: "tool_call_response", id: "call_1", response: "72 and sunny" }] },
     ]);
+    expect(capturedAttributes["jess.last_input"]).toBe("what's the weather in Chicago?");
   });
 
   it("includes tool_use blocks in gen_ai.output.messages instead of dropping them, and records the raw form", async () => {

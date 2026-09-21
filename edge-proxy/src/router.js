@@ -79,14 +79,19 @@ function genAiInputMessages(messages) {
 // Finds the most recent user message and pulls out its text, handling both
 // the OpenAI string-content shape and the Anthropic text-block-array shape.
 function lastUserInputText(messages) {
-  const lastUser = [...messages].reverse().find((message) => message.role === "user");
-  if (lastUser === undefined) return undefined;
-  if (typeof lastUser.content === "string") return lastUser.content;
-  if (Array.isArray(lastUser.content)) {
-    return lastUser.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text ?? block.content ?? "")
-      .join("");
+  for (const message of [...messages].reverse()) {
+    if (message.role !== "user") continue;
+    if (typeof message.content === "string") return message.content;
+    if (Array.isArray(message.content)) {
+      const text = message.content
+        .filter((block) => block.type === "text")
+        .map((block) => block.text ?? block.content ?? "")
+        .join("");
+      // Anthropic represents tool results as role:"user" messages whose
+      // content is tool_result blocks, not typed text. Skip those and keep
+      // looking further back for what the human actually typed.
+      if (text !== "") return text;
+    }
   }
   return undefined;
 }
