@@ -127,10 +127,13 @@ describe("routeToBackend", () => {
     expect(upstreamRequest.url).toBe("https://chat.example.com/v1/models");
   });
 
-  it("passes through a bodyless POST without crashing", async () => {
-    await routeToBackend(request("/", {}), env);
-    const [upstreamRequest] = fetchMock.mock.calls[0];
-    expect(upstreamRequest.url).toBe("https://chat.example.com/");
+  it("gives a friendly, actionable error for a bodyless POST", async () => {
+    const res = await routeToBackend(request("/", {}), env);
+    expect(res.status).toBe(400);
+    const text = await res.text();
+    expect(text).toMatch(/no body/);
+    expect(text).toMatch(/curl .*\/v1\/chat\/completions/);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("returns a 504 when the backend times out", async () => {

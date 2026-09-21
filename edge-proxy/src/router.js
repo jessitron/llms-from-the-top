@@ -124,8 +124,17 @@ export async function routeToBackend(request, env) {
   let raw;
   if (request.method === "POST") {
     raw = await request.text();
+    if (raw === "") {
+      return new Response(
+        `You POSTed with no body. Send JSON like this:\n\n` +
+          `curl ${incoming.origin}/v1/chat/completions \\\n` +
+          `  -X POST -H "x-api-key: <your key>" -H "content-type: application/json" \\\n` +
+          `  -d '{"messages": [{"role": "user", "content": "hi"}]}'\n`,
+        { status: 400 },
+      );
+    }
     try {
-      body = raw === "" ? undefined : JSON.parse(raw);
+      body = JSON.parse(raw);
     } catch (err) {
       return new Response(
         `Invalid JSON in request body: ${err.message}\nGot: ${raw}`,
