@@ -90,17 +90,21 @@ MODEL=nano ../../vort_4d.rb
 
 Ask it to fix the sort. `Hey, can you fix my sort?`
 
-You might have to convince it to use its tools, it can get surly. 
+You might have to convince it to use its tools, it can get surly.
 
 🐣 My system prompt tells it to refuse to do non-coding tasks. Take that line out and "nano" and "luna" will behave better. Different models need different prompts!
 
-After it tries, run `test.pl` to see whether it succeeded. Sometimes it does, sometimes not.
+After it tries, run `test.pl` to see whether it succeeded. Sometimes it does, sometimes not. "haiku" succeeds most of the time.
 
 ## Do this
 
 Give it a way to test! Add a tool that runs a shell command and returns the output.
 
 Example: vort_4e.rb
+
+(I also changed the system prompt there so that luna and nano would stop being lazy)
+
+Try again to ask one of the small models to fix it. It has a better chance now!
 
 ## Try this
 
