@@ -18,6 +18,7 @@ loop do
     "content-type": "application/json",
     "x-api-key": "exploreddd",
     "user-agent": "vort run by jessitron",
+    "x-agent-name": "vort_2b",
     "x-conversation-id": CONVERSATION_ID
   }
   case response

@@ -23,7 +23,7 @@
  *
  * gen_ai.conversation.id and gen_ai.agent.name (from the caller's
  * x-conversation-id / x-agent-name headers, the latter defaulting to
- * "vort") are carried as OTel Baggage rather than plain headers, via the
+ * "secret agent") are carried as OTel Baggage rather than plain headers, via the
  * W3C `baggage` header (also patched onto the outgoing fetch automatically,
  * same as `traceparent`). Baggage lives on the active
  * context rather than one span, so BaggageSpanProcessor below can stamp it
@@ -65,7 +65,7 @@ const handler = {
     if (authError) return authError;
 
     const conversationId = request.headers.get("x-conversation-id") || crypto.randomUUID();
-    const agentName = request.headers.get("x-agent-name") || "vort";
+    const agentName = request.headers.get("x-agent-name") || "secret agent";
     const baggage = propagation.createBaggage({
       "gen_ai.conversation.id": { value: conversationId },
       "gen_ai.agent.name": { value: agentName },
