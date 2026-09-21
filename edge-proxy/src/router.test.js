@@ -260,6 +260,96 @@ describe("routeToAnthropic", () => {
     expect(res.status).toBe(429);
   });
 
+  it("translates OpenAI tools/tool_choice into Anthropic's shape", async () => {
+    const body = {
+      messages: [{ role: "user", content: "what's the weather?" }],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "get_weather",
+            description: "Get the weather for a city",
+            parameters: { type: "object", properties: { city: { type: "string" } } },
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "get_weather" } },
+    };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    await routeToAnthropic(body, incoming, env);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const sentBody = JSON.parse(init.body);
+    expect(sentBody.tools).toEqual([
+      {
+        name: "get_weather",
+        description: "Get the weather for a city",
+        input_schema: { type: "object", properties: { city: { type: "string" } } },
+      },
+    ]);
+    expect(sentBody.tool_choice).toEqual({ type: "tool", name: "get_weather" });
+  });
+
+  it("translates an assistant tool_calls message and a tool-result message into Anthropic's shape", async () => {
+    const body = {
+      messages: [
+        { role: "user", content: "what's the weather in Chicago?" },
+        {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            { id: "call_1", type: "function", function: { name: "get_weather", arguments: '{"city":"Chicago"}' } },
+          ],
+        },
+        { role: "tool", tool_call_id: "call_1", content: "72 and sunny" },
+      ],
+    };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    await routeToAnthropic(body, incoming, env);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const sentBody = JSON.parse(init.body);
+    expect(sentBody.messages).toEqual([
+      { role: "user", content: "what's the weather in Chicago?" },
+      {
+        role: "assistant",
+        content: [{ type: "tool_use", id: "call_1", name: "get_weather", input: { city: "Chicago" } }],
+      },
+      {
+        role: "user",
+        content: [{ type: "tool_result", tool_use_id: "call_1", content: "72 and sunny" }],
+      },
+    ]);
+  });
+
+  it("translates Anthropic tool_use response blocks into OpenAI tool_calls", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        id: "msg_456",
+        model: "claude-haiku-4-5-20251001",
+        content: [
+          { type: "text", text: "Let me check that." },
+          { type: "tool_use", id: "toolu_1", name: "get_weather", input: { city: "Chicago" } },
+        ],
+        stop_reason: "tool_use",
+        usage: { input_tokens: 10, output_tokens: 5 },
+      }),
+    );
+    const body = { messages: [{ role: "user", content: "what's the weather in Chicago?" }] };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    const res = await routeToAnthropic(body, incoming, env);
+    const json = await res.json();
+
+    expect(json.choices[0].message).toEqual({
+      role: "assistant",
+      content: "Let me check that.",
+      tool_calls: [
+        { id: "toolu_1", type: "function", function: { name: "get_weather", arguments: '{"city":"Chicago"}' } },
+      ],
+    });
+    expect(json.choices[0].finish_reason).toBe("tool_calls");
+  });
+
   it("sets gen_ai input/output message attributes, splitting out system instructions", async () => {
     const body = {
       messages: [

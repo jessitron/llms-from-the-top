@@ -63,6 +63,55 @@ export async function fetchUpstream(input, init) {
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 const ANTHROPIC_MAX_TOKENS = 1024;
 
+// OpenAI's tools array ({type: "function", function: {name, description,
+// parameters}}) vs. Anthropic's ({name, description, input_schema}).
+function toAnthropicTools(tools) {
+  if (tools === undefined) return undefined;
+  return tools.map((tool) => ({
+    name: tool.function.name,
+    description: tool.function.description,
+    input_schema: tool.function.parameters,
+  }));
+}
+
+// OpenAI's tool_choice ("auto" | "none" | "required" | {type: "function",
+// function: {name}}) vs. Anthropic's ({type: "auto" | "none" | "any" | "tool", name}).
+function toAnthropicToolChoice(toolChoice) {
+  if (toolChoice === undefined) return undefined;
+  if (toolChoice === "auto") return { type: "auto" };
+  if (toolChoice === "none") return { type: "none" };
+  if (toolChoice === "required") return { type: "any" };
+  return { type: "tool", name: toolChoice.function.name };
+}
+
+// Translates one OpenAI-shaped message into Anthropic's shape. An assistant
+// message with tool_calls becomes text + tool_use content blocks; a tool
+// message (the result of running one) becomes a user message carrying a
+// tool_result block. Plain text messages pass through unchanged.
+function toAnthropicMessage(message) {
+  if (message.role === "tool") {
+    return {
+      role: "user",
+      content: [{ type: "tool_result", tool_use_id: message.tool_call_id, content: message.content }],
+    };
+  }
+  if (message.role === "assistant" && message.tool_calls !== undefined) {
+    const content = [];
+    if (message.content) content.push({ type: "text", text: message.content });
+    for (const call of message.tool_calls) {
+      content.push({ type: "tool_use", id: call.id, name: call.function.name, input: JSON.parse(call.function.arguments) });
+    }
+    return { role: "assistant", content };
+  }
+  return message;
+}
+
+// Anthropic's stop_reason "tool_use" is OpenAI's finish_reason "tool_calls";
+// every other stop_reason (end_turn, max_tokens, ...) is passed through as-is.
+function toOpenAiFinishReason(stopReason) {
+  return stopReason === "tool_use" ? "tool_calls" : stopReason;
+}
+
 // Anthropic's Messages API has no OpenAI-compatible endpoint, so this
 // translates request and response shapes to match the vLLM backends'
 // /v1/chat/completions — the caller (see examples/2-chat) can't tell which
@@ -79,14 +128,19 @@ export async function routeToAnthropic(body, incoming, env) {
   let system;
   for (const message of body.messages) {
     if (message.role === "system") system = message.content;
-    else messages.push(message);
+    else messages.push(toAnthropicMessage(message));
   }
+
+  const tools = toAnthropicTools(body.tools);
+  const toolChoice = toAnthropicToolChoice(body.tool_choice);
 
   const anthropicRequest = {
     model: ANTHROPIC_MODEL,
     max_tokens: body.max_tokens ?? ANTHROPIC_MAX_TOKENS,
     messages,
     ...(system !== undefined ? { system } : {}),
+    ...(tools !== undefined ? { tools } : {}),
+    ...(toolChoice !== undefined ? { tool_choice: toolChoice } : {}),
   };
 
   // gen_ai.* attributes here follow OTel's GenAI semantic conventions, which
@@ -120,10 +174,21 @@ export async function routeToAnthropic(body, incoming, env) {
   if (anthropicResponse.usage?.output_tokens !== undefined) {
     span?.setAttribute("gen_ai.usage.output_tokens", anthropicResponse.usage.output_tokens);
   }
-  const content = anthropicResponse.content?.map((block) => block.text ?? "").join("") ?? "";
+  const content = anthropicResponse.content
+    ?.filter((block) => block.type === "text")
+    .map((block) => block.text)
+    .join("") ?? "";
+  const toolCalls = anthropicResponse.content
+    ?.filter((block) => block.type === "tool_use")
+    .map((block) => ({
+      id: block.id,
+      type: "function",
+      function: { name: block.name, arguments: JSON.stringify(block.input) },
+    })) ?? [];
+  const finishReason = toOpenAiFinishReason(anthropicResponse.stop_reason);
   span?.setAttribute(
     "gen_ai.output.messages",
-    genAiOutputMessages({ role: "assistant", content }, anthropicResponse.stop_reason),
+    genAiOutputMessages({ role: "assistant", content }, finishReason),
   );
   return Response.json({
     id: anthropicResponse.id,
@@ -131,8 +196,12 @@ export async function routeToAnthropic(body, incoming, env) {
     choices: [
       {
         index: 0,
-        message: { role: "assistant", content },
-        finish_reason: anthropicResponse.stop_reason,
+        message: {
+          role: "assistant",
+          content,
+          ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {}),
+        },
+        finish_reason: finishReason,
       },
     ],
     usage: {
