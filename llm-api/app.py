@@ -87,6 +87,10 @@ def _serve_vllm(model_name, served_model_name):
 
     env = {
         **os.environ,
+        # otel_middleware.py reads this to populate gen_ai.response.model,
+        # since vLLM's own response body only ever echoes served_model_name
+        # (our alias), never the real HF model id.
+        "GEN_AI_RESPONSE_MODEL": model_name,
         "OTEL_SERVICE_NAME": OTEL_SERVICE_NAME,
         # vLLM defaults the OTLP protocol to grpc; Honeycomb's traces
         # endpoint above is the http/protobuf one.

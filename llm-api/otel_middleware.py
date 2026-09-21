@@ -118,8 +118,6 @@ def _record_request_content(span, payload: dict) -> None:
 
 
 def _record_response_content(span, payload: dict) -> None:
-    if "model" in payload:
-        span.set_attribute("gen_ai.response.model", payload["model"])
     for i, choice in enumerate(payload.get("choices", [])):
         text = choice.get("text")
         if text is None and "message" in choice:
@@ -194,6 +192,12 @@ async def trace_http_requests(request, call_next):
         span.set_attribute("url.path", request.url.path)
         if operation_name := OPERATION_NAMES.get(request.url.path):
             span.set_attribute("gen_ai.operation.name", operation_name)
+        # vLLM's own request/response "model" field is just our
+        # --served-model-name alias (e.g. "chat"), same as what the caller
+        # sent — it never surfaces the real HF model id. app.py/app-better.py
+        # set this env var to the real name at deploy time.
+        if real_model_name := os.environ.get("GEN_AI_RESPONSE_MODEL"):
+            span.set_attribute("gen_ai.response.model", real_model_name)
         span.set_attribute("modal.task_id", os.environ.get("MODAL_TASK_ID", ""))
         if request.client:
             span.set_attribute("client.address", request.client.host)
