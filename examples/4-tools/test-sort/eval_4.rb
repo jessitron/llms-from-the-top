@@ -16,8 +16,14 @@ max_nudges = 5
 
 test_cases = [
   {
-    input: "Can you fix my program here? When it's fixed and markov.pl actually works, print 🎺 in your reply.",
-    nudge: "Please just make markov.pl work.",
+    name: "vague",
+    input: "Can you fix my program here? When it's fixed and it actually works, print 🎺 in your reply.",
+    nudge: "Please just make it work.",
+  },
+  {
+    name: "specific",
+    input: "Can you fix sort.pl in the current directory? When it's fixed and it actually works, print 🎺 in your reply.",
+    nudge: "Please just make sort.pl work.",
   },
 ]
 
@@ -31,6 +37,9 @@ def read_until_prompt(r)
 rescue EOFError
   buf
 end
+
+original_lines = File.readlines("#{workspace_dir}/arrays.txt").map(&:chomp)
+expected_lines = original_lines.map { |line| line.split.map(&:to_i).sort.join(" ") }
 
 test_cases.each do |tc|
   conversation_id = SecureRandom.uuid
@@ -68,24 +77,25 @@ test_cases.each do |tc|
 
   eval_finish_reason = declared_done ? "declared_done" : "gave_up"
 
-  markov_output, = Open3.capture2("perl markov.pl < shakespeare-sonnets.txt", chdir: tmp_dir)
-  words = markov_output.split(/\s+/).reject(&:empty?)
-  fixed = words.length == 50 && words.uniq.length > 1
+  sort_output, = Open3.capture2("perl sort.pl < arrays.txt", chdir: tmp_dir)
+  actual_lines = sort_output.lines.map(&:chomp)
+  score = expected_lines.each_index.count { |i| actual_lines[i] == expected_lines[i] }
+  max_score = expected_lines.length
 
-  diff = fixed ? nil : Open3.capture2("diff", "-u", "#{workspace_dir}/markov.pl", "#{tmp_dir}/markov.pl").first
+  diff = score == max_score ? nil : Open3.capture2("diff", "-u", "#{workspace_dir}/sort.pl", "#{tmp_dir}/sort.pl").first
 
-  grade = fixed ? "PASS" : "FAIL"
-  color = grade == "PASS" ? "\e[32m" : "\e[31m"
+  grade = score == max_score ? "PASS" : "FAIL"
+  color = score == max_score ? "\e[32m" : score.zero? ? "\e[31m" : "\e[33m"
   puts transcript
-  puts "#{color}#{grade}. finish_reason=#{eval_finish_reason}, turns=#{turns}, tool_calls=#{tool_call_count}, markov_words=#{words.length}, unique_words=#{words.uniq.length}\e[0m"
+  puts "#{color}[#{tc[:name]}] #{grade}. finish_reason=#{eval_finish_reason}, turns=#{turns}, tool_calls=#{tool_call_count}, lines_correct=#{score}/#{max_score}\e[0m"
 
   FileUtils.remove_entry(tmp_dir)
 
   Net::HTTP.post URI('https://api.honeycomb.io/1/events/llms-from-the-top-evals'), {
     "gen_ai.conversation.id": conversation_id, "gen_ai.request.model": ENV["MODEL"],
-    program: program, grade: grade, eval_finish_reason: eval_finish_reason,
+    program: program, test_case: tc[:name], grade: grade, eval_finish_reason: eval_finish_reason,
     turns: turns, tool_call_count: tool_call_count,
-    markov_word_count: words.length, markov_unique_words: words.uniq.length,
+    lines_correct: score, lines_total: max_score,
     diff: diff,
   }.to_json, { "content-type": 'application/json', "x-honeycomb-team": ENV['HONEYCOMB_API_KEY'] }
 end
