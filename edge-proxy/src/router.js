@@ -74,6 +74,23 @@ function genAiInputMessages(messages) {
   return JSON.stringify(messages.map(genAiMessagePart));
 }
 
+// Plain-text pair for easy grouping in Honeycomb (jess.last_input /
+// jess.completion), alongside the structured gen_ai.* attributes above.
+// Finds the most recent user message and pulls out its text, handling both
+// the OpenAI string-content shape and the Anthropic text-block-array shape.
+function lastUserInputText(messages) {
+  const lastUser = [...messages].reverse().find((message) => message.role === "user");
+  if (lastUser === undefined) return undefined;
+  if (typeof lastUser.content === "string") return lastUser.content;
+  if (Array.isArray(lastUser.content)) {
+    return lastUser.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text ?? block.content ?? "")
+      .join("");
+  }
+  return undefined;
+}
+
 function genAiOutputMessages(message, finishReason) {
   const part = genAiMessagePart(message);
   if (finishReason !== undefined) part.finish_reason = finishReason;
@@ -221,6 +238,8 @@ export async function routeToAnthropic(body, incoming, env) {
   // instead of just quietly blank gen_ai.input.messages parts.
   span?.setAttribute("app.raw_input_messages", JSON.stringify(messages));
   span?.setAttribute("gen_ai.input.messages", genAiInputMessages(messages));
+  const lastInput = lastUserInputText(messages);
+  if (lastInput !== undefined) span?.setAttribute("jess.last_input", lastInput);
   if (system !== undefined) {
     span?.setAttribute("gen_ai.system_instructions", JSON.stringify([{ type: "text", content: system }]));
   }
@@ -260,6 +279,7 @@ export async function routeToAnthropic(body, incoming, env) {
     })) ?? [];
   const finishReason = toOpenAiFinishReason(anthropicResponse.stop_reason);
   span?.setAttribute("app.raw_output_message", JSON.stringify(anthropicResponse.content ?? []));
+  span?.setAttribute("jess.completion", content);
   span?.setAttribute(
     "gen_ai.output.messages",
     genAiOutputMessages(
@@ -349,6 +369,8 @@ export async function routeToBackend(request, env) {
     span?.setAttribute("gen_ai.request.model", body.model ?? "chat");
     span?.setAttribute("app.raw_input_messages", JSON.stringify(body.messages));
     span?.setAttribute("gen_ai.input.messages", genAiInputMessages(body.messages));
+    const lastInput = lastUserInputText(body.messages);
+    if (lastInput !== undefined) span?.setAttribute("jess.last_input", lastInput);
     if (body.tools !== undefined) {
       span?.setAttribute("gen_ai.tool.definitions", genAiToolDefinitions(body.tools));
     }
@@ -397,6 +419,9 @@ export async function routeToBackend(request, env) {
   if (choice?.message) {
     span?.setAttribute("app.raw_output_message", JSON.stringify(choice.message));
     span?.setAttribute("gen_ai.output.messages", genAiOutputMessages(choice.message, choice.finish_reason));
+    if (typeof choice.message.content === "string") {
+      span?.setAttribute("jess.completion", choice.message.content);
+    }
   }
   if (responseBody.model) span?.setAttribute("gen_ai.response.model", responseBody.model);
   if (responseBody.usage?.prompt_tokens !== undefined) {

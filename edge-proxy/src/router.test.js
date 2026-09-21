@@ -190,6 +190,8 @@ describe("routeToBackend", () => {
     ]);
     expect(capturedAttributes["gen_ai.usage.input_tokens"]).toBe(3);
     expect(capturedAttributes["gen_ai.usage.output_tokens"]).toBe(4);
+    expect(capturedAttributes["jess.last_input"]).toBe("hi");
+    expect(capturedAttributes["jess.completion"]).toBe("hi there");
   });
 
   it("sets gen_ai.tool.definitions from the OpenAI tools array", async () => {
@@ -490,6 +492,8 @@ describe("routeToAnthropic", () => {
         finish_reason: "end_turn",
       },
     ]);
+    expect(capturedAttributes["jess.last_input"]).toBe("hi");
+    expect(capturedAttributes["jess.completion"]).toBe("hello there");
   });
 
   it("translates a tool_use/tool_result exchange into gen_ai parts instead of blank text, and records the raw form", async () => {
