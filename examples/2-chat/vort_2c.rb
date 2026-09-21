@@ -3,6 +3,8 @@
 require "net/http"
 require "json"
 
+model = ENV["MODEL"] || "better"
+
 messages = []
 loop do
   print "vort> "
@@ -10,7 +12,7 @@ loop do
   break if input in "exit" | "quit"
   messages << {role: "user", content: input  }
 
-  request = { model: "better", messages: messages }
+  request = { model: model, messages: messages }
   response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/chat/completions"), request.to_json, {
     "content-type": "application/json",
     "x-api-key": "exploreddd"
