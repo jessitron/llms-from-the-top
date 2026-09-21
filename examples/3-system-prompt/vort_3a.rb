@@ -9,7 +9,6 @@ SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quick
 model = ENV["MODEL"] || "chat"
 
 CONVERSATION_ID = SecureRandom.uuid
-puts "Conversation ID: #{CONVERSATION_ID}"
 
 messages = [ { role: "system", content: SYSTEM_PROMPT } ]
 loop do

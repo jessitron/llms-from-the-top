@@ -16,7 +16,6 @@ You can read a file! say `READFILE <filename>`
 model = ENV["MODEL"] || "chat"
 
 CONVERSATION_ID = SecureRandom.uuid
-puts "Conversation ID: #{CONVERSATION_ID}"
 
 messages = [ { role: "system", content: SYSTEM_PROMPT } ]
 loop do
