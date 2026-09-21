@@ -29,3 +29,26 @@ style, a bare "Added X" line). This is the gap a skill is meant to close.
 
 - `workspace/` — what vort sees: `greeter.rb`, `CHANGELOG.md`. Point vort here.
 - `README.md` (this file) — for you, not vort. Stays out of vort's cwd.
+
+## Planned twist: breaking change
+
+The three seed entries are all ✨/🐛 on one component, so haiku can pattern-match
+the format without much effort. To make the gap more convincing, ask for a
+**breaking change** instead — e.g. rename `greeter.rb`'s positional name arg
+into a required `--name` flag.
+
+Breaking changes are a case where vort (and most people) *do* have strong
+priors from other repos — semver, Conventional Commits' `BREAKING CHANGE:`
+footer, GitHub release notes — none of which match this project's actual
+convention, and none of which are demonstrated in the seed entries. Expect a
+confident, plausible, wrong answer rather than "I don't know the convention
+for this."
+
+The real convention (for the eventual skill to state, not for vort to infer):
+breaking changes use 💥 and are followed by an indented `migrate:` line
+explaining the upgrade, e.g.:
+
+```
+## 2024.02.01 💥 renamed --name positional arg to --name flag — greeter
+   migrate: replace `greeter Alice` with `greeter --name Alice`
+```
