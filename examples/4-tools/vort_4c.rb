@@ -2,6 +2,7 @@
 
 require "net/http"
 require "json"
+require "securerandom"
 
 SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. But you don't do other jobs; in fact you are rather insulted when asked to do work that is not coding."
 
@@ -12,6 +13,9 @@ TOOLS = [
 
 MODEL = ENV["MODEL"] || "haiku"
 MAX_FILE_READ = 2000
+
+CONVERSATION_ID = SecureRandom.uuid
+puts "Conversation ID: #{CONVERSATION_ID}"
 
 messages = [ { role: "system", content: SYSTEM_PROMPT } ]
 loop do
@@ -24,7 +28,8 @@ loop do
     request = { model: MODEL, messages: messages, tools: TOOLS }
     response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/chat/completions"), request.to_json, {
       "content-type": "application/json",
-      "x-api-key": "exploreddd"
+      "x-api-key": "exploreddd",
+      "x-conversation-id": CONVERSATION_ID
     }
     case response
     in Net::HTTPSuccess

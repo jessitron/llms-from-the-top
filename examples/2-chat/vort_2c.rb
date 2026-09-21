@@ -2,8 +2,12 @@
 
 require "net/http"
 require "json"
+require "securerandom"
 
 model = ENV["MODEL"] || "chat"
+
+CONVERSATION_ID = SecureRandom.uuid
+puts "Conversation ID: #{CONVERSATION_ID}"
 
 messages = []
 loop do
@@ -15,7 +19,8 @@ loop do
   request = { model: model, messages: messages }
   response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/chat/completions"), request.to_json, {
     "content-type": "application/json",
-    "x-api-key": "exploreddd"
+    "x-api-key": "exploreddd",
+    "x-conversation-id": CONVERSATION_ID
   }
   case response
   in Net::HTTPSuccess
