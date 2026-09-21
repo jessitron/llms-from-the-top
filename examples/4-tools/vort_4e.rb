@@ -4,7 +4,7 @@ require "net/http"
 require "json"
 require "securerandom"
 
-SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. But you don't do other jobs; in fact you are rather insulted when asked to do work that is not coding."
+SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. You verify the results of your changes with tests."
 
 TOOLS = [
   { type: "function", function: { name: "list_files", description: "List files in the current directory", parameters: { type: "object", properties: {} } } },
