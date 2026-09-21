@@ -16,6 +16,7 @@ test_cases = [
       ->(answer) { [40, "Found Simon Peyton.Jones 😎"] if answer =~ /Simon Peyton.Jones/ },
       ->(answer) { [20, "Found Wadler"] if answer =~ /Wadler/ },
       ->(answer) { [-40, "Found Andrew Hunt 😡"] if answer =~ /Andrew Hunt/ },
+      ->(answer) { [20, "Mentioned the committee"] if answer =~ /committee/i },
       ->(answer) { [10, "Stopped intentionally"] if answer =~ /🛑$/ },
     ],
   },

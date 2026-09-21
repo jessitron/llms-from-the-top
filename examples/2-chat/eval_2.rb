@@ -16,6 +16,7 @@ test_cases = [
       ->(answer) { [20, "Found Wadler"] if answer =~ /Wadler/ },
       ->(answer) { [-40, "Found Andrew Hunt 😡"] if answer =~ /Andrew Hunt/ },
       ->(answer) { [-100, "Found Paul Graham 😡"] if answer =~ /Paul Graham/ },
+      ->(answer) { [20, "Mentioned the committee"] if answer =~ /committee/i },
       ->(answer) { [40, "Found the number 3"] if answer =~ /\b3\b/i },
       ->(answer) { [40, "Found the number 5"] if answer =~ /\b5\b/i },
       ->(answer) { [20, "Found the number 100"] if answer =~ /\b100\b/i },
