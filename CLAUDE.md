@@ -39,6 +39,7 @@ Common commands:
 - `yx context <id>` — view a yak's freeform notes
 - `yx context <id> <<< "All the context" ` — write the freeform notes
 - `yx prune` — remove all done yaks (tidy up periodically)
+- `yx reset` — rebuild `.yaks` (the local cache) from the git event store (git notes). Use this whenever yaks look out of sync — e.g. a yak added while working in a git worktree may not show up in `yx list` from the main checkout (or vice versa) until `.yaks` there is rebuilt with `reset`.
 
 When starting a new piece of work in this repo, check `yx list --ready` first before assuming what's next. When finishing a piece of work, mark the corresponding yak `done` rather than just leaving it.
 
