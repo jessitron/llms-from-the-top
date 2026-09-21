@@ -4,7 +4,7 @@ use warnings;
 
 sub partition {
   my ($arr, $lo, $hi) = @_;
-  my $pivot = $arr->[int(($lo + $hi) / 2)];
+  my $pivot = $arr->[$lo];
   my $i = $lo - 1;
   my $j = $hi + 1;
   while (1) {
