@@ -14,6 +14,25 @@ program = ARGV[0] || "vort_4d.rb"
 workspace_dir = "#{dir}/workspace"
 max_nudges = 5
 
+HONEYCOMB_DATASET = "llms-from-the-top-evals"
+HONEYCOMB_SERVICE_NAME = "llms-from-the-top-eval-harness"
+
+def post_event(dataset, row)
+  Net::HTTP.post URI("https://api.honeycomb.io/1/events/#{dataset}"), row.compact.to_json,
+    { "content-type": "application/json", "x-honeycomb-team": ENV["HONEYCOMB_API_KEY"] }
+end
+
+# late-arriving eval score, attached to the span above via trace.parent_id.
+# Honeycomb auto-assigns trace.span_id for these; don't set one.
+def post_eval_event(trace_id, parent_span_id, name, value, label, explanation = nil)
+  post_event HONEYCOMB_DATASET, {
+    "meta.annotation_type": "span_event", "trace.trace_id": trace_id, "trace.parent_id": parent_span_id,
+    name: "gen_ai.evaluation.result", "service.name": HONEYCOMB_SERVICE_NAME,
+    "gen_ai.evaluation.name": name, "gen_ai.evaluation.score.label": label,
+    "gen_ai.evaluation.score.value": value, "gen_ai.evaluation.explanation": explanation,
+  }
+end
+
 test_cases = [
   {
     name: "vague",
@@ -72,6 +91,9 @@ expected_lines = original_lines.map { |line| line.split.map(&:to_i).sort.join(" 
 
 test_cases.each do |tc|
   conversation_id = SecureRandom.uuid
+  trace_id = SecureRandom.hex(16)
+  span_id = SecureRandom.hex(8)
+  span_start = Time.now
   tmp_dir = Dir.mktmpdir("eval_4-")
   FileUtils.cp_r(Dir.glob("#{workspace_dir}/*"), tmp_dir)
 
@@ -125,12 +147,22 @@ test_cases.each do |tc|
 
   FileUtils.remove_entry(tmp_dir)
 
-  Net::HTTP.post URI('https://api.honeycomb.io/1/events/llms-from-the-top-evals'), {
-    "gen_ai.conversation.id": conversation_id, "gen_ai.request.model": ENV["MODEL"],
-    program: program, test_case: tc[:name], grade: grade, eval_finish_reason: eval_finish_reason,
-    turns: turns, tool_call_count: tool_call_count,
-    score: score, max_score: max_score, lines_correct: lines_correct, lines_total: lines_total,
-    **behavior,
-    diff: diff,
-  }.to_json, { "content-type": 'application/json', "x-honeycomb-team": ENV['HONEYCOMB_API_KEY'] }
+  # the span the eval events below attach to — everything about the circumstance
+  # being evaluated goes here so it's queryable/visible alongside the scores.
+  post_event HONEYCOMB_DATASET, {
+    "trace.trace_id": trace_id, "trace.span_id": span_id, name: "invoke_agent",
+    "service.name": HONEYCOMB_SERVICE_NAME, "duration_ms": ((Time.now - span_start) * 1000).round,
+    "gen_ai.conversation.id": conversation_id, "gen_ai.operation.name": "invoke_agent",
+    "gen_ai.agent.name": "vort", "gen_ai.request.model": ENV["MODEL"],
+    "app.eval.suite": File.basename(dir), "app.eval.program": program, "app.eval.test_case": tc[:name],
+    "app.eval.input": tc[:input], "app.eval.nudge": tc[:nudge],
+    eval_finish_reason: eval_finish_reason, turns: turns, tool_call_count: tool_call_count,
+    grade: grade, score: score, max_score: max_score, lines_correct: lines_correct, lines_total: lines_total,
+  }
+
+  behavior.each do |name, passed|
+    post_eval_event trace_id, span_id, name.to_s, passed ? 1 : 0, passed ? "yes" : "no"
+  end
+  post_eval_event trace_id, span_id, "sort_correctness",
+    lines_total.zero? ? 0 : lines_correct.to_f / lines_total, grade, diff
 end
