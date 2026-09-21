@@ -36,12 +36,25 @@ end
 # a 💥 entry followed by an indented "migrate:" line, e.g.
 #   ## 2024.02.01 💥 renamed --name positional arg to --name flag — greeter
 #      migrate: replace `greeter Alice` with `greeter --name Alice`
-def changelog_follows_convention?(changelog)
+#
+# Points awarded piecemeal so a plausible-but-wrong guess (e.g. inventing its
+# own emoji) still scores partial credit instead of a flat FAIL.
+POINTS = { flag_works: 5, changelog_updated: 1, changelog_format_ok: 1, correct_emoji: 1, migrate_line: 2 }
+MAX_SCORE = POINTS.values.sum
+
+def score_changelog(changelog, original_top_line)
   lines = changelog.lines.map(&:chomp)
-  header_index = lines.index { |line| line =~ /^## \d{4}\.\d{2}\.\d{2} 💥 .+ — greeter$/ }
-  return false unless header_index
-  lines[header_index + 1] =~ /^\s+migrate: /
+  top_index = lines.index { |line| line.start_with?("## ") }
+  top_line = top_index && lines[top_index]
+  {
+    changelog_updated: !!(top_line && top_line != original_top_line),
+    changelog_format_ok: !!(top_line =~ /^## \d{4}\.\d{2}\.\d{2} \S+ .+ — \S+$/),
+    correct_emoji: !!(top_line && top_line.include?("💥")),
+    migrate_line: !!(top_index && lines[top_index + 1] =~ /^\s+migrate: /),
+  }
 end
+
+original_top_line = File.read("#{workspace_dir}/CHANGELOG.md").lines.map(&:chomp).find { |l| l.start_with?("## ") }
 
 test_cases.each do |tc|
   conversation_id = SecureRandom.uuid
@@ -82,22 +95,22 @@ test_cases.each do |tc|
   flag_works = status.success? && greeting.include?("Jess")
 
   changelog = File.read("#{tmp_dir}/CHANGELOG.md")
-  changelog_correct = changelog_follows_convention?(changelog)
+  scores = score_changelog(changelog, original_top_line).merge(flag_works: flag_works)
+  score = scores.sum { |k, v| v ? POINTS[k] : 0 }
 
   diff = Open3.capture2("diff", "-u", "#{workspace_dir}/CHANGELOG.md", "#{tmp_dir}/CHANGELOG.md").first
 
-  grade = (flag_works && changelog_correct) ? "PASS" : "FAIL"
-  color = grade == "PASS" ? "\e[32m" : "\e[31m"
+  color = score == MAX_SCORE ? "\e[32m" : score.zero? ? "\e[31m" : "\e[33m"
   puts transcript
-  puts "#{color}#{grade}. finish_reason=#{eval_finish_reason}, turns=#{turns}, tool_calls=#{tool_call_count}, flag_works=#{flag_works}, changelog_correct=#{changelog_correct}\e[0m"
+  puts "#{color}#{score}/#{MAX_SCORE}. finish_reason=#{eval_finish_reason}, turns=#{turns}, tool_calls=#{tool_call_count}, #{scores}\e[0m"
 
   FileUtils.remove_entry(tmp_dir)
 
   Net::HTTP.post URI('https://api.honeycomb.io/1/events/llms-from-the-top-evals'), {
     "gen_ai.conversation.id": conversation_id, "gen_ai.request.model": ENV["MODEL"],
-    program: program, grade: grade, eval_finish_reason: eval_finish_reason,
+    program: program, score: score, max_score: MAX_SCORE, eval_finish_reason: eval_finish_reason,
     turns: turns, tool_call_count: tool_call_count,
-    flag_works: flag_works, changelog_correct: changelog_correct,
+    **scores,
     diff: diff,
   }.to_json, { "content-type": 'application/json', "x-honeycomb-team": ENV['HONEYCOMB_API_KEY'] }
 end
