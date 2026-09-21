@@ -24,12 +24,20 @@ OTEL_SERVICE_NAME = "llms-from-the-top-api"
 vllm_image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install(
-        "vllm==0.6.6.post1",
-        "huggingface_hub[hf_transfer]==0.26.2",
+        # 0.6.6 predates support for this model's architecture
+        # (Mistral3ForConditionalGeneration, added in 0.8.3). Avoid 0.8.4,
+        # which regressed Mistral Small 3.1 inference.
+        "vllm==0.8.5",
+        # left unpinned, pip picks a transformers new enough to rename
+        # PixtralRotaryEmbedding, which breaks vllm 0.8.5's own import of it.
+        "transformers==4.53.0",
+        "huggingface_hub[hf_transfer]>=0.30.0",
         # vLLM's own OTel tracing (--otlp-traces-endpoint) is an optional
         # import — these packages aren't in vllm's own requirements.
-        "opentelemetry-sdk==1.27.0",
-        "opentelemetry-exporter-otlp-proto-http==1.27.0",
+        # pinned to 1.26.0, not 1.27.0: vllm 0.8.5 requires opentelemetry-sdk
+        # <1.27.0.
+        "opentelemetry-sdk==1.26.0",
+        "opentelemetry-exporter-otlp-proto-http==1.26.0",
         "opentelemetry-semantic-conventions-ai==0.4.2",
         # otel_middleware.py uses this to call vLLM's own /tokenize and
         # /detokenize endpoints to capture the chat-template-rendered prompt.
@@ -83,6 +91,16 @@ def serve_better():
         "--host", "0.0.0.0",
         "--port", "8000",
         "--max-model-len", "4096",
+        # This repo is mistral-native (params.json/tekken.json, no
+        # preprocessor_config.json), so all three mistral-format flags are
+        # needed together, per vLLM's own Mistral-Small serving guide.
+        "--tokenizer-mode", "mistral",
+        "--config-format", "mistral",
+        "--load-format", "mistral",
+        # text-only demo — no image input needed. Single-quoted because cmd
+        # is run through a shell below, which would otherwise eat the
+        # double quotes this JSON needs.
+        "--limit-mm-per-prompt", "'{\"image\":0}'",
         "--otlp-traces-endpoint", HONEYCOMB_TRACES_ENDPOINT,
         # Adds the root HTTP span (client info, prompt/completion content)
         # that vLLM's own --otlp-traces-endpoint tracer doesn't record.
