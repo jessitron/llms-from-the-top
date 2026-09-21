@@ -19,6 +19,7 @@ import modal
 MODEL_NAME = "mistralai/Mistral-Small-3.2-24B-Instruct-2506"
 SERVED_MODEL_NAME = "better"
 HONEYCOMB_TRACES_ENDPOINT = "https://api.honeycomb.io/v1/traces"
+HONEYCOMB_LOGS_ENDPOINT = "https://api.honeycomb.io/v1/logs"
 OTEL_SERVICE_NAME = "llms-from-the-top-api"
 
 vllm_image = (
@@ -51,6 +52,13 @@ vllm_image = (
     .add_local_file(
         local_path=os.path.join(os.path.dirname(__file__), "otel_middleware.py"),
         remote_path="/root/otel_middleware.py",
+    )
+    # Tells vLLM (via VLLM_LOGGING_CONFIG_PATH below) to route its own log
+    # records through otel_middleware.build_otel_log_handler in addition to
+    # stdout, so they show up in Honeycomb next to the traces.
+    .add_local_file(
+        local_path=os.path.join(os.path.dirname(__file__), "vllm_logging_config.json"),
+        remote_path="/root/vllm_logging_config.json",
     )
 )
 
@@ -91,6 +99,10 @@ def serve_better():
         "--host", "0.0.0.0",
         "--port", "8000",
         "--max-model-len", "4096",
+        # Otherwise vLLM logs periodic throughput stats (via
+        # vllm.engine.metrics) every ~10s, which vllm_logging_config.json
+        # routes to Honeycomb as noisy, low-value log events.
+        "--disable-log-stats",
         # This repo is mistral-native (params.json/tekken.json, no
         # preprocessor_config.json), so all three mistral-format flags are
         # needed together, per vLLM's own Mistral-Small serving guide.
@@ -121,5 +133,10 @@ def serve_better():
         # otel_middleware.py builds its own exporter from this directly,
         # since it runs a separate TracerProvider from vLLM's own tracer.
         "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": HONEYCOMB_TRACES_ENDPOINT,
+        # Makes vLLM's own log records (it logs via stdlib `logging`, not
+        # print) flow through otel_middleware.build_otel_log_handler, which
+        # reads this endpoint directly.
+        "VLLM_LOGGING_CONFIG_PATH": "/root/vllm_logging_config.json",
+        "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": HONEYCOMB_LOGS_ENDPOINT,
     }
     subprocess.Popen(" ".join(cmd), shell=True, env=env)
