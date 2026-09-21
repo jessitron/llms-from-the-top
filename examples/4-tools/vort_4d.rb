@@ -55,7 +55,7 @@ loop do
         rescue => e
           "Error: #{e.message}"
         end
-        puts "  #{name}(#{args}) -> #{result[0..80]}"
+        puts "  #{name}(#{args}) -> #{result[0..80].lines.map { |line| "  #{line}" }.join("")}"
         messages << { role: "tool", tool_call_id: call["id"], content: result }
       end
     else

@@ -49,7 +49,7 @@ loop do
         name = call.dig("function", "name")
         args = JSON.parse(call.dig("function", "arguments") || "{}")
         result = HANDLERS[name]&.call(args)
-        puts "  #{name}(#{args}) -> #{result[0..80]}"
+        puts "  #{name}(#{args}) -> #{result[0..80].lines.map { |line| "  #{line}" }.join("")}"
         messages << { role: "tool", tool_call_id: call["id"], content: result }
       end
     else
