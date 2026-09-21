@@ -107,25 +107,41 @@ def _truncate(value) -> str:
     return text if len(text) <= MAX_ATTR_LEN else text[:MAX_ATTR_LEN] + "...(truncated)"
 
 
+def _genai_message(role: str, content) -> dict:
+    # Honeycomb's Gen AI message format (see edge-proxy/genai-message-format.md):
+    # each message becomes {role, parts: [{type: "text", content}]} — note the
+    # part field is `content`, not `text`. Mirrors the same shape edge-proxy
+    # sends for gen_ai.input.messages / gen_ai.output.messages.
+    return {"role": role, "parts": [{"type": "text", "content": _truncate(content) if content is not None else ""}]}
+
+
 def _record_request_content(span, payload: dict) -> None:
     if "model" in payload:
         span.set_attribute("gen_ai.request.model", payload["model"])
     if "prompt" in payload:
-        span.set_attribute("gen_ai.prompt.0.content", _truncate(payload["prompt"]))
-    for i, message in enumerate(payload.get("messages", [])):
-        span.set_attribute(f"gen_ai.prompt.{i}.role", message.get("role", ""))
-        span.set_attribute(f"gen_ai.prompt.{i}.content", _truncate(message.get("content", "")))
+        span.set_attribute("gen_ai.input.messages", json.dumps([_genai_message("user", payload["prompt"])]))
+    messages = payload.get("messages")
+    if messages:
+        span.set_attribute(
+            "gen_ai.input.messages",
+            json.dumps([_genai_message(m.get("role", ""), m.get("content")) for m in messages]),
+        )
 
 
 def _record_response_content(span, payload: dict) -> None:
-    for i, choice in enumerate(payload.get("choices", [])):
+    output_messages = []
+    for choice in payload.get("choices", []):
         text = choice.get("text")
+        role = "assistant"
         if text is None and "message" in choice:
             text = choice["message"].get("content")
-        if text is not None:
-            span.set_attribute(f"gen_ai.completion.{i}.content", _truncate(text))
+            role = choice["message"].get("role", "assistant")
+        message = _genai_message(role, text)
         if "finish_reason" in choice:
-            span.set_attribute(f"gen_ai.completion.{i}.finish_reason", choice["finish_reason"])
+            message["finish_reason"] = choice["finish_reason"]
+        output_messages.append(message)
+    if output_messages:
+        span.set_attribute("gen_ai.output.messages", json.dumps(output_messages))
     for key, value in payload.get("usage", {}).items():
         span.set_attribute(f"gen_ai.usage.{key}", value)
 
