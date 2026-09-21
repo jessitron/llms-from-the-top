@@ -4,9 +4,13 @@
  * Routes to one of three Modal-hosted vLLM backends (base, chat, or better
  * model) by the request body's `model` field, defaulting to the chat model.
  * `model: "haiku"` instead calls the real Anthropic API — a workshop backup
- * for when Modal is being Modal (see routeToAnthropic). Requires an
- * `x-api-key` header matching the API_KEY secret — see checkAuth below.
+ * for when Modal is being Modal (see routeToAnthropic in router.js). Requires
+ * an `x-api-key` header matching the API_KEY secret — see checkAuth below.
  * Set it with `wrangler secret put API_KEY`.
+ *
+ * The actual routing/auth/translation logic lives in router.js, kept free of
+ * any `cloudflare:`-only imports so it can be unit tested under plain Node
+ * (see router.test.js). This file is just the Workers/OTel wiring around it.
  *
  * Wrapped with `instrument()` from @microlabs/otel-cf-workers (Honeycomb's
  * recommended Workers OTel library — it doesn't need Node polyfills, unlike
@@ -32,8 +36,7 @@
 import { instrument, OTLPExporter, BatchTraceSpanProcessor } from "@microlabs/otel-cf-workers";
 import { context, propagation, trace } from "@opentelemetry/api";
 import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from "@opentelemetry/core";
-
-const DEFAULT_MAX_TOKENS = 200;
+import { checkAuth, routeToBackend } from "./router.js";
 
 class BaggageSpanProcessor {
   onStart(span, parentContext) {
@@ -49,184 +52,6 @@ class BaggageSpanProcessor {
   forceFlush() {
     return Promise.resolve();
   }
-}
-
-function checkAuth(request, env) {
-  const key = request.headers.get("x-api-key");
-  if (key === null) {
-    return new Response(
-      "Unauthorized: missing x-api-key header. Ask Jess for the value.",
-      { status: 401 },
-    );
-  }
-  if (key !== env.API_KEY) {
-    return new Response(
-      "Unauthorized: wrong x-api-key value. Ask Jess for the right value.",
-      { status: 401 },
-    );
-  }
-  return null;
-}
-
-async function fetchUpstream(input, init) {
-  try {
-    return await fetch(input, { ...init, signal: AbortSignal.timeout(15_000) });
-  } catch (err) {
-    if (err.name === "TimeoutError") {
-      return new Response(
-        "Backend didn't respond in time — it's probably cold-starting. Try again in like 2 minutes.",
-        { status: 504 },
-      );
-    }
-    throw err;
-  }
-}
-
-const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
-const ANTHROPIC_MAX_TOKENS = 1024;
-
-// Anthropic's Messages API has no OpenAI-compatible endpoint, so this
-// translates request and response shapes to match the vLLM backends'
-// /v1/chat/completions — the caller (see examples/2-chat) can't tell which
-// backend answered.
-async function routeToAnthropic(body, incoming, env) {
-  if (incoming.pathname !== "/v1/chat/completions") {
-    return new Response(
-      `model "haiku" only supports /v1/chat/completions, got ${incoming.pathname}`,
-      { status: 400 },
-    );
-  }
-
-  const messages = [];
-  let system;
-  for (const message of body.messages) {
-    if (message.role === "system") system = message.content;
-    else messages.push(message);
-  }
-
-  const anthropicRequest = {
-    model: ANTHROPIC_MODEL,
-    max_tokens: body.max_tokens ?? ANTHROPIC_MAX_TOKENS,
-    messages,
-    ...(system !== undefined ? { system } : {}),
-  };
-
-  // gen_ai.* attributes here follow OTel's GenAI semantic conventions, which
-  // Honeycomb's cost calculator (docs.honeycomb.io/investigate/observe/llm-cost)
-  // reads directly: operation name, provider, model, and token usage.
-  const span = trace.getActiveSpan();
-  span?.setAttribute("gen_ai.operation.name", "chat");
-  span?.setAttribute("gen_ai.provider.name", "anthropic");
-  span?.setAttribute("gen_ai.request.model", ANTHROPIC_MODEL);
-
-  const response = await fetchUpstream("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify(anthropicRequest),
-  });
-  if (!response.ok) return response;
-
-  const anthropicResponse = await response.json();
-  span?.setAttribute("gen_ai.response.model", anthropicResponse.model);
-  if (anthropicResponse.usage?.input_tokens !== undefined) {
-    span?.setAttribute("gen_ai.usage.input_tokens", anthropicResponse.usage.input_tokens);
-  }
-  if (anthropicResponse.usage?.output_tokens !== undefined) {
-    span?.setAttribute("gen_ai.usage.output_tokens", anthropicResponse.usage.output_tokens);
-  }
-  const content = anthropicResponse.content?.map((block) => block.text ?? "").join("") ?? "";
-  return Response.json({
-    id: anthropicResponse.id,
-    model: anthropicResponse.model,
-    choices: [
-      {
-        index: 0,
-        message: { role: "assistant", content },
-        finish_reason: anthropicResponse.stop_reason,
-      },
-    ],
-    usage: {
-      prompt_tokens: anthropicResponse.usage?.input_tokens,
-      completion_tokens: anthropicResponse.usage?.output_tokens,
-      total_tokens:
-        (anthropicResponse.usage?.input_tokens ?? 0) + (anthropicResponse.usage?.output_tokens ?? 0),
-    },
-  });
-}
-
-const VALID_MODELS = ["base", "chat", "better", "haiku"];
-
-async function routeToBackend(request, env) {
-  const incoming = new URL(request.url);
-
-  let body;
-  if (request.method === "POST") {
-    const raw = await request.text();
-    try {
-      body = raw === "" ? undefined : JSON.parse(raw);
-    } catch (err) {
-      return new Response(
-        `Invalid JSON in request body: ${err.message}\nGot: ${raw}`,
-        { status: 400 },
-      );
-    }
-  }
-
-  if (body?.model !== undefined && !VALID_MODELS.includes(body.model)) {
-    return new Response(
-      `Unknown model "${body.model}". Valid values are: ${VALID_MODELS.join(", ")} (or omit "model" for the default chat model).`,
-      { status: 400 },
-    );
-  }
-
-  if (incoming.pathname === "/v1/chat/completions") {
-    if (body?.messages === undefined) {
-      return new Response(
-        `/v1/chat/completions requires a "messages" field in the request body.`,
-        { status: 400 },
-      );
-    }
-    if (!Array.isArray(body.messages)) {
-      return new Response(
-        `"messages" must be an array of {role, content} objects, got: ${JSON.stringify(body.messages)}`,
-        { status: 400 },
-      );
-    }
-  }
-
-  if (body?.model === "haiku") return routeToAnthropic(body, incoming, env);
-
-  const backendUrl =
-    body?.model === "base"
-      ? env.BASE_BACKEND_URL
-      : body?.model === "better"
-        ? env.BETTER_BACKEND_URL
-        : env.CHAT_BACKEND_URL;
-  const upstream = new URL(backendUrl);
-  upstream.pathname = incoming.pathname;
-  upstream.search = incoming.search;
-
-  let upstreamRequest;
-  if (body) {
-    if (body.model === undefined) body.model = "chat";
-    if (incoming.pathname === "/v1/completions" && body.max_tokens === undefined) {
-      body.max_tokens = DEFAULT_MAX_TOKENS;
-    }
-    upstreamRequest = new Request(upstream, {
-      method: request.method,
-      headers: request.headers,
-      body: JSON.stringify(body),
-    });
-  } else {
-    upstreamRequest = new Request(upstream, request);
-  }
-  upstreamRequest.headers.set("host", upstream.hostname);
-
-  return fetchUpstream(upstreamRequest);
 }
 
 const WORKSHOP_REPO = "https://github.com/jessitron/llms-from-the-top";

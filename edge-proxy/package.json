@@ -1,11 +1,15 @@
 {
   "name": "llms-from-the-top-edge-proxy",
   "private": true,
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
     "@microlabs/otel-cf-workers": "^1.0.0-rc.52",
     "@opentelemetry/core": "^2.11.0"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.0.0",
+    "vitest": "^3.0.0"
   }
 }
