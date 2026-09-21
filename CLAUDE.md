@@ -58,7 +58,7 @@ Our data goes to environment llms-from-the-top.
 
 ## Finishing a worktree: use `scripts/merge-worktree.sh`
 
-When work in a worktree is done, merge it into local main with this script rather than doing the merge/cleanup by hand. Run it from the main checkout (repo root), not from inside the worktree — use ExitWorktree first.
+When work in a worktree is done, merge it into local main with this script rather than doing the merge/cleanup by hand. Run it from the main checkout (repo root), not from inside the worktree — use `ExitWorktree` with `action: "keep"` first, not `"remove"`. The script itself deletes the worktree and branch after merging, so `"remove"` beforehand just discards the commit and forces a redo.
 
 ```
 scripts/merge-worktree.sh [--keep-merge-commit] <branch-name> ["merge commit message"]
