@@ -79,6 +79,10 @@ def _serve_vllm(model_name, served_model_name):
         # to start. Workshop requests are a few hundred tokens; this leaves
         # plenty of cache for concurrent requests too.
         "--max-model-len", "2048",
+        # Otherwise vLLM logs periodic throughput stats (via
+        # vllm.engine.metrics) every ~10s, which vllm_logging_config.json
+        # routes to Honeycomb as noisy, low-value log events.
+        "--disable-log-stats",
         "--otlp-traces-endpoint", HONEYCOMB_TRACES_ENDPOINT,
         # Adds the root HTTP span (client info, prompt/completion content)
         # that vLLM's own --otlp-traces-endpoint tracer doesn't record.
