@@ -1,5 +1,8 @@
 # Sort Fixture
 
+This is a bug that's hard enough to be challenging for nano and Haiku.
+My objective here is to demonstrate that being able to run the program makes a difference.
+
 `workspace/sort.pl` is supposed to sort each line of numbers in
 `arrays.txt` into ascending order. It's a recursive quicksort using a
 Hoare partition scheme — genuinely tricky code, not a one-line typo. The
@@ -47,14 +50,14 @@ The final `perl sort.pl < arrays.txt` output isn't a pass/fail — it's a
 score, because a model that investigates properly but doesn't quite land
 the fix should score better than one that flails or bluffs. Points:
 
-| behavior | points |
-|---|---|
-| called `list_files` | 1 |
-| read `sort.pl` | 2 |
-| read `arrays.txt` (checked the test data, not just the code) | 1 |
-| attempted verification — wrote a scratch file to check its fix against, or said it was testing/checking (vort has no `run_tests` tool yet, so this is the closest it can get) | 3 |
-| named the real root cause in its own words — "partition", "recursion", "Hoare", `p - 1` — rather than a plausible-sounding guess | 3 |
-| each line of `arrays.txt` that comes out correctly sorted | 1 (× 8) |
+| behavior                                                                                                                                                                      | points  |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| called `list_files`                                                                                                                                                           | 1       |
+| read `sort.pl`                                                                                                                                                                | 2       |
+| read `arrays.txt` (checked the test data, not just the code)                                                                                                                  | 1       |
+| attempted verification — wrote a scratch file to check its fix against, or said it was testing/checking (vort has no `run_tests` tool yet, so this is the closest it can get) | 3       |
+| named the real root cause in its own words — "partition", "recursion", "Hoare", `p - 1` — rather than a plausible-sounding guess                                              | 3       |
+| each line of `arrays.txt` that comes out correctly sorted                                                                                                                     | 1 (× 8) |
 
 Behavior points come from the transcript (which tools got called, and what
 vort said in its own replies — tool-call JSON is excluded so a bug fix that
