@@ -6,8 +6,14 @@ require "json"
 SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. But you don't do other jobs; in fact you are rather insulted when asked to do work that is not coding."
 
 TOOLS = [
-  { type: "function", function: { name: "list_files", description: "List files in the current directory", parameters: { type: "object", properties: {} } } },
-  { type: "function", function: { name: "read_file", description: "Read a file's contents", parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" } }, required: ["path"] } } }
+  { type: "function", function: 
+    { name: "list_files", 
+      description: "List files in the current directory", 
+      parameters: { type: "object", properties: {} } } },
+  { type: "function", function: 
+    { name: "read_file", 
+      description: "Read a file's contents", 
+      parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" } }, required: ["path"] } } }
 ]
 
 model = ENV["MODEL"] || "better"
@@ -28,6 +34,7 @@ loop do
     case response
     in Net::HTTPSuccess
       message = JSON.parse(response.body).dig("choices", 0, "message")
+      puts "vort: #{message["content"]}"
       message.delete("reasoning_content") # echoing this field back to vLLM 400s
       # vLLM's mistral tool-call parser expects "[TOOL_CALLS]name[ARGS]{...}",
       # but this model emits "[TOOL_CALLS]name{...}" (no [ARGS]) and the
@@ -40,7 +47,6 @@ loop do
       messages << message
       tool_calls = message["tool_calls"]
       if tool_calls.nil? || tool_calls.empty?
-        puts "vort: #{message["content"]}"
         break
       end
       tool_calls.each do |call|
