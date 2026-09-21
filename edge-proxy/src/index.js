@@ -111,6 +111,14 @@ async function routeToAnthropic(body, incoming, env) {
     ...(system !== undefined ? { system } : {}),
   };
 
+  // gen_ai.* attributes here follow OTel's GenAI semantic conventions, which
+  // Honeycomb's cost calculator (docs.honeycomb.io/investigate/observe/llm-cost)
+  // reads directly: operation name, provider, model, and token usage.
+  const span = trace.getActiveSpan();
+  span?.setAttribute("gen_ai.operation.name", "chat");
+  span?.setAttribute("gen_ai.provider.name", "anthropic");
+  span?.setAttribute("gen_ai.request.model", ANTHROPIC_MODEL);
+
   const response = await fetchUpstream("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -123,6 +131,13 @@ async function routeToAnthropic(body, incoming, env) {
   if (!response.ok) return response;
 
   const anthropicResponse = await response.json();
+  span?.setAttribute("gen_ai.response.model", anthropicResponse.model);
+  if (anthropicResponse.usage?.input_tokens !== undefined) {
+    span?.setAttribute("gen_ai.usage.input_tokens", anthropicResponse.usage.input_tokens);
+  }
+  if (anthropicResponse.usage?.output_tokens !== undefined) {
+    span?.setAttribute("gen_ai.usage.output_tokens", anthropicResponse.usage.output_tokens);
+  }
   const content = anthropicResponse.content?.map((block) => block.text ?? "").join("") ?? "";
   return Response.json({
     id: anthropicResponse.id,
