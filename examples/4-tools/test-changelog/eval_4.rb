@@ -68,6 +68,7 @@ test_cases.each do |tc|
 
   r, w, pid = PTY.spawn({ "CONVERSATION_ID" => conversation_id }, "ruby #{vort_dir}/#{program}", chdir: tmp_dir)
   r.set_encoding("UTF-8")
+  system("stty -echo < #{r.path}") # otherwise the pty echoes our input back, and "🎺" in the prompt text false-positives declared_done
   read_until_prompt(r) # the first "vort> " prompt, before any input
 
   input = tc[:input]
