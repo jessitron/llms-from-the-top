@@ -67,10 +67,44 @@ To do that, we move to a real model provider. Use "nano" and my endpoint will ro
 
 Example: vort_4c.rb
 
-## Try This
+## Try this
+
+Use "haiku" or "nano" as the model there, and it should happily look at files.
+
+## Do this
 
 Now let's add some tool calls that let the agent affect the world!
 
+3. Add a tool for writing the content of a file. (I'm not trying to be efficient here)
+
+Example: vort_4d.rb
+
+## Try this
+
+In this folder, go to test-sort/workspace, and run your coding assistant there. Use model "nano"
+
+```
+cd test-sort/workspace
+MODEL=nano ../../vort_4d.rb
+```
+
+Ask it to fix the sort. `Hey, can you fix my sort?`
+
+You might have to convince it to use its tools, it can get surly. 
+
+🐣 My system prompt tells it to refuse to do non-coding tasks. Take that line out and "nano" and "luna" will behave better. Different models need different prompts!
+
+After it tries, run `test.pl` to see whether it succeeded. Sometimes it does, sometimes not.
+
+## Do this
+
+Give it a way to test! Add a tool that runs a shell command and returns the output.
+
+Example: vort_4e.rb
+
+## Try this
+
+Run it in test-sort/workspace again with model "nano" and ask it to fix the sort and then run `test.pl` to check its own work.
 
 ## API expansion
 
