@@ -1,5 +1,7 @@
 # Before the workshop: what to start up
 
+[] push this repo
+
 Two independent Modal apps, deployed and stopped separately.
 
 ## 1. base + chat pair (`llm-api/app.py`)
@@ -12,7 +14,7 @@ cd llm-api
 - Deploys `mistralai/Mistral-7B-v0.1` (`base`) and
   `mistralai/Mistral-7B-Instruct-v0.1` (`chat`), each on its own A10G.
 - Sends a warm-up request to `chat` only, so the GPU spin-up/model load
-  happens now, not on the first participant's request. `base` is *not*
+  happens now, not on the first participant's request. `base` is _not_
   warmed up automatically — it isn't always used in a given session.
 - If this session will use the base model (stage `1-completions`), warm it
   up manually before the workshop by running `vort_1a.rb` once:
@@ -41,11 +43,11 @@ Modal bills per second of actual GPU uptime (idle-scale-down is
 between short gaps is fine — cost accrues only while a container is actually
 up):
 
-| Function      | GPU        | ~$/hour |
-|---------------|------------|---------|
-| `serve`       | A10G       | ~$1.10  |
-| `serve_chat`  | A10G       | ~$1.10  |
-| `serve_better`| A100-80GB  | ~$2.50  |
+| Function       | GPU       | ~$/hour |
+| -------------- | --------- | ------- |
+| `serve`        | A10G      | ~$1.10  |
+| `serve_chat`   | A10G      | ~$1.10  |
+| `serve_better` | A100-80GB | ~$2.50  |
 
 (A10G rate from Modal's pricing page at the time `app.py` was written;
 A100-80GB and the two other candidates checked 2026-09-20 — L40S ~$1.95/hr
