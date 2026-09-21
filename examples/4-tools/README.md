@@ -104,11 +104,7 @@ Example: vort_4e.rb
 
 (I also changed the system prompt there so that luna and nano would stop being lazy)
 
-Try again to ask one of the small models to fix it. It has a better chance now!
-
-## Try this
-
-Run it in test-sort/workspace again with model "nano" and ask it to fix the sort and then run `test.pl` to check its own work.
+Try again to ask one of the small models to fix it. It has a better chance now! Haiku will succeed consistently.
 
 ## API expansion
 
