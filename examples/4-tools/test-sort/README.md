@@ -79,6 +79,10 @@ cd workspace && perl sort.pl < arrays.txt
 ```
 
 Every line of output should be its input line's numbers in ascending order.
+`workspace/test.pl` does this check for you — `perl test.pl` runs
+`sort.pl` against `arrays.txt` and prints PASS/FAIL per line. It lives in
+`workspace/` so a future `run_tests`/`run_program` tool could hand it to
+vort directly.
 
 `eval_4.rb`, in this directory, automates exactly that: it copies
 `workspace/` into a scratch dir, drives vort_4d.rb (or another vort script)
@@ -89,6 +93,6 @@ or `MODEL=haiku ruby eval_4.rb` to compare models.
 
 ## Layout
 
-- `workspace/` — what vort sees: `sort.pl`, `arrays.txt`. Point vort here.
+- `workspace/` — what vort sees: `sort.pl`, `arrays.txt`, `test.pl`. Point vort here.
 - `README.md` (this file) — for you, not vort. Stays out of vort's cwd.
 - `eval_4.rb` — the automated eval; run it directly (`ruby eval_4.rb`).
