@@ -9,8 +9,9 @@ require 'json'
 require 'securerandom'
 
 dir = __dir__
+vort_dir = File.dirname(dir)
 program = ARGV[0] || "vort_4d.rb"
-fixture_dir = "#{dir}/test-markov"
+workspace_dir = "#{dir}/workspace"
 max_nudges = 5
 
 test_cases = [
@@ -34,14 +35,14 @@ end
 test_cases.each do |tc|
   conversation_id = SecureRandom.uuid
   tmp_dir = Dir.mktmpdir("eval_4-")
-  FileUtils.cp_r(Dir.glob("#{fixture_dir}/*"), tmp_dir)
+  FileUtils.cp_r(Dir.glob("#{workspace_dir}/*"), tmp_dir)
 
   transcript = ""
   tool_call_count = 0
   turns = 0
   declared_done = false
 
-  r, w, pid = PTY.spawn({ "CONVERSATION_ID" => conversation_id }, "ruby #{dir}/#{program}", chdir: tmp_dir)
+  r, w, pid = PTY.spawn({ "CONVERSATION_ID" => conversation_id }, "ruby #{vort_dir}/#{program}", chdir: tmp_dir)
   r.set_encoding("UTF-8")
   read_until_prompt(r) # the first "vort> " prompt, before any input
 
@@ -70,7 +71,7 @@ test_cases.each do |tc|
   words = markov_output.split(/\s+/).reject(&:empty?)
   fixed = words.length == 50 && words.uniq.length > 1
 
-  diff = fixed ? nil : Open3.capture2("diff", "-u", "#{fixture_dir}/markov.pl", "#{tmp_dir}/markov.pl").first
+  diff = fixed ? nil : Open3.capture2("diff", "-u", "#{workspace_dir}/markov.pl", "#{tmp_dir}/markov.pl").first
 
   grade = fixed ? "PASS" : "FAIL"
   color = grade == "PASS" ? "\e[32m" : "\e[31m"
