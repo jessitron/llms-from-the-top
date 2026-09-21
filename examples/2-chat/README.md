@@ -38,7 +38,7 @@ It should know what it's talking about!
 
 ## Now we can make it prettier
 
-Those `[INST]` delimiters are specific to this model, and nobody wants to send those. Nobody uses the `/v1/completions` endpoint anymore.
+Those `[INST]` delimiters are specific to this model, and nobody wants to send those. Nobody uses the `/v1/completions` endpoint anymore. Instead, we use the `/v1/chat/completions` API. Then the model provider
 
 Example: vort_2c.rb
 
