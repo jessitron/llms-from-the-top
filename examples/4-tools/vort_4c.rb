@@ -11,6 +11,11 @@ TOOLS = [
   { type: "function", function: { name: "read_file", description: "Read a file's contents", parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" } }, required: ["path"] } } }
 ]
 
+HANDLERS = {
+  "list_files" => ->(_) { Dir.children(".").join("\n") },
+  "read_file" => ->(args) { File.exist?(args["path"]) ? File.read(args["path"], encoding: "UTF-8")[0..MAX_FILE_READ] : "File not found <#{args["path"]}>" }
+}
+
 MODEL = ENV["MODEL"] || "haiku"
 MAX_FILE_READ = 2000
 
@@ -42,12 +47,7 @@ loop do
       tool_calls.each do |call|
         name = call.dig("function", "name")
         args = JSON.parse(call.dig("function", "arguments") || "{}")
-        result = case name
-        when "list_files"
-          Dir.children(".").join("\n")
-        when "read_file"
-          File.exist?(args["path"]) ? File.read(args["path"], encoding: "UTF-8")[0..MAX_FILE_READ] : "File not found <#{args["path"]}>"
-        end
+        result = HANDLERS[name]&.call(args)
         puts "  #{name}(#{args}) -> #{result[0..80]}"
         messages << { role: "tool", tool_call_id: call["id"], content: result }
       end
