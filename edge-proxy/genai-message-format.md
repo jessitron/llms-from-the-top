@@ -57,6 +57,11 @@ Each attribute is a **JSON-encoded string** containing an **array of message obj
 - **`gen_ai.system_instructions`** is a *separate* attribute (array of parts, or a plain string)
   — Honeycomb folds it in as a synthesized leading `system` message if input/output don't
   already have one.
+- **`gen_ai.tool.definitions`** is also a *separate* attribute — the list of tools the model was
+  given for this call (not part of `gen_ai.input.messages`). It's a JSON-encoded array shaped
+  `{"type": "function", "name", "description", "parameters"}` — flattened, unlike OpenAI's
+  request shape which nests `name`/`description`/`parameters` under a `function` key. Without
+  this attribute Honeycomb has no tool schema to render alongside `tool_call` parts.
 - Keep each attribute's JSON under a reasonable size — Honeycomb truncates content that's too
   large; truncate/redact on your end if messages can be large or sensitive.
 

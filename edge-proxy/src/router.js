@@ -125,6 +125,21 @@ function toAnthropicTools(tools) {
   }));
 }
 
+// Honeycomb's gen_ai.tool.definitions attribute (OTel GenAI semconv) wants
+// a flattened {type: "function", name, description, parameters} shape —
+// not OpenAI's nested {type: "function", function: {name, ...}}.
+function genAiToolDefinitions(tools) {
+  if (tools === undefined) return undefined;
+  return JSON.stringify(
+    tools.map((tool) => ({
+      type: "function",
+      name: tool.function.name,
+      description: tool.function.description,
+      parameters: tool.function.parameters,
+    })),
+  );
+}
+
 // OpenAI's tool_choice ("auto" | "none" | "required" | {type: "function",
 // function: {name}}) vs. Anthropic's ({type: "auto" | "none" | "any" | "tool", name}).
 function toAnthropicToolChoice(toolChoice) {
@@ -208,6 +223,9 @@ export async function routeToAnthropic(body, incoming, env) {
   span?.setAttribute("gen_ai.input.messages", genAiInputMessages(messages));
   if (system !== undefined) {
     span?.setAttribute("gen_ai.system_instructions", JSON.stringify([{ type: "text", content: system }]));
+  }
+  if (body.tools !== undefined) {
+    span?.setAttribute("gen_ai.tool.definitions", genAiToolDefinitions(body.tools));
   }
 
   const response = await fetchUpstream("https://api.anthropic.com/v1/messages", {
@@ -331,6 +349,9 @@ export async function routeToBackend(request, env) {
     span?.setAttribute("gen_ai.request.model", body.model ?? "chat");
     span?.setAttribute("app.raw_input_messages", JSON.stringify(body.messages));
     span?.setAttribute("gen_ai.input.messages", genAiInputMessages(body.messages));
+    if (body.tools !== undefined) {
+      span?.setAttribute("gen_ai.tool.definitions", genAiToolDefinitions(body.tools));
+    }
   }
 
   const backendUrl =

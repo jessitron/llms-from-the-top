@@ -192,6 +192,42 @@ describe("routeToBackend", () => {
     expect(capturedAttributes["gen_ai.usage.output_tokens"]).toBe(4);
   });
 
+  it("sets gen_ai.tool.definitions from the OpenAI tools array", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        model: "chat",
+        choices: [{ message: { role: "assistant", content: "hi there" }, finish_reason: "stop" }],
+      }),
+    );
+    await routeToBackend(
+      request("/v1/chat/completions", {
+        body: {
+          messages: [{ role: "user", content: "what's the weather?" }],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "get_weather",
+                description: "Get the weather for a city",
+                parameters: { type: "object", properties: { city: { type: "string" } } },
+              },
+            },
+          ],
+        },
+      }),
+      env,
+    );
+
+    expect(JSON.parse(capturedAttributes["gen_ai.tool.definitions"])).toEqual([
+      {
+        type: "function",
+        name: "get_weather",
+        description: "Get the weather for a city",
+        parameters: { type: "object", properties: { city: { type: "string" } } },
+      },
+    ]);
+  });
+
   it("captures raw and translated gen_ai messages for an OpenAI-shaped tool call/result exchange", async () => {
     fetchMock.mockResolvedValue(
       Response.json({
@@ -360,6 +396,14 @@ describe("routeToAnthropic", () => {
       },
     ]);
     expect(sentBody.tool_choice).toEqual({ type: "tool", name: "get_weather" });
+    expect(JSON.parse(capturedAttributes["gen_ai.tool.definitions"])).toEqual([
+      {
+        type: "function",
+        name: "get_weather",
+        description: "Get the weather for a city",
+        parameters: { type: "object", properties: { city: { type: "string" } } },
+      },
+    ]);
   });
 
   it("translates an assistant tool_calls message and a tool-result message into Anthropic's shape", async () => {
