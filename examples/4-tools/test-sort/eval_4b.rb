@@ -103,7 +103,7 @@ test_cases.each do |tc|
   span_id = SecureRandom.hex(8)
   span_start = Time.now
   identity = {
-    "gen_ai.conversation.id": conversation_id, "gen_ai.agent.name": "vort", "gen_ai.request.model": ENV["MODEL"],
+    "gen_ai.conversation.id": conversation_id, "gen_ai.agent.name": program.sub(/\.rb$/, ""), "gen_ai.request.model": ENV["MODEL"],
     "app.eval.suite": File.basename(dir), "app.eval.program": program, "app.eval.test_case": tc[:name],
     "app.eval.input": tc[:input], "app.eval.nudge": tc[:nudge],
   }
