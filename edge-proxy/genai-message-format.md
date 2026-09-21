@@ -1,5 +1,8 @@
 ## Honeycomb Gen AI message format (`gen_ai.input.messages` / `gen_ai.output.messages`)
 
+For other attributes to add:
+See Also: https://docs.honeycomb.io/send-data/use-cases/agents#enriching-your-traces-with-genai-context
+
 When instrumenting LLM calls, set these two span attributes so Honeycomb's "Gen AI fields" tab
 can render the conversation instead of showing "This span doesn't include message content."
 
@@ -9,14 +12,17 @@ Each attribute is a **JSON-encoded string** containing an **array of message obj
 [
   {
     "role": "user",
-    "parts": [
-      { "type": "text", "content": "What's the weather in NYC?" }
-    ]
+    "parts": [{ "type": "text", "content": "What's the weather in NYC?" }]
   },
   {
     "role": "assistant",
     "parts": [
-      { "type": "tool_call", "id": "call_1", "name": "get_weather", "arguments": "{\"city\":\"NYC\"}" }
+      {
+        "type": "tool_call",
+        "id": "call_1",
+        "name": "get_weather",
+        "arguments": "{\"city\":\"NYC\"}"
+      }
     ],
     "finish_reason": "tool_calls"
   }
@@ -54,10 +60,10 @@ Each attribute is a **JSON-encoded string** containing an **array of message obj
 - **`name`** (optional): participant name.
 - Any other field on a message or part is preserved but shown as a collapsed "extra field" —
   it won't affect rendering of the recognized fields.
-- **`gen_ai.system_instructions`** is a *separate* attribute (array of parts, or a plain string)
+- **`gen_ai.system_instructions`** is a _separate_ attribute (array of parts, or a plain string)
   — Honeycomb folds it in as a synthesized leading `system` message if input/output don't
   already have one.
-- **`gen_ai.tool.definitions`** is also a *separate* attribute — the list of tools the model was
+- **`gen_ai.tool.definitions`** is also a _separate_ attribute — the list of tools the model was
   given for this call (not part of `gen_ai.input.messages`). It's a JSON-encoded array shaped
   `{"type": "function", "name", "description", "parameters"}` — flattened, unlike OpenAI's
   request shape which nests `name`/`description`/`parameters` under a `function` key. Without
