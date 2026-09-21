@@ -9,6 +9,8 @@ messages = [
   { role: "assistant", content: "Arrr, 'tis Paris, matey!" },
   { role: "user", content: "And Germany?" },
 ]
+puts "Messages:"
+puts JSON.pretty_generate(messages)
 
 tokenize_request = { model: "chat", messages: messages, add_generation_prompt: true }
 tokenize_response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/tokenize"), tokenize_request.to_json, {
@@ -23,4 +25,5 @@ detokenize_response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.co
   "content-type": "application/json",
   "x-api-key": "exploreddd"
 }
+puts "Detokenized prompt:"
 puts JSON.parse(detokenize_response.body)["prompt"]
