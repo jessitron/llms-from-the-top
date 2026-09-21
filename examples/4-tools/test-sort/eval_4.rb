@@ -38,6 +38,35 @@ rescue EOFError
   buf
 end
 
+# Points for the behavior we want to see on the way to a fix, not just the
+# final outcome — so a model that investigates properly but doesn't quite
+# land the fix still scores better than one that flails or bluffs.
+POINTS = { listed_files: 1, read_sort_pl: 2, read_arrays_txt: 1, attempted_verification: 3, named_root_cause: 3 }
+BEHAVIOR_MAX = POINTS.values.sum
+
+def vort_replies(transcript)
+  # vort's own words only — not tool-call JSON, which can contain source
+  # code that coincidentally spells out words like "partition".
+  transcript.scan(/^vort: (.*?)(?=^  \w+\(|^vort> |\z)/m)
+end
+
+def score_behavior(transcript)
+  replies = vort_replies(transcript).join("\n")
+  {
+    listed_files: !!transcript.match(/^  list_files\(/),
+    read_sort_pl: !!transcript.match(/^  read_file\(\{"path" => "sort\.pl"\}\)/),
+    read_arrays_txt: !!transcript.match(/^  read_file\(\{"path" => "arrays\.txt"\}\)/),
+    # vort has no run/test tool yet, so "trying to verify" shows up as either
+    # writing a scratch file to check the fix against, or just saying so.
+    attempted_verification: !!transcript.match(/"path" => "\w*(test|temp)\w*\.(pl|txt)"/i) ||
+      !!replies.match(/\b(let me (test|verify|check)|tried running|to verify|test(ed|ing)? (it|this|the fix))\b/i),
+    # a plausible-sounding fix isn't the same as having found the actual bug —
+    # these are the words that show up when vort names the real root cause
+    # (the Hoare partition recursion bounds) rather than guessing.
+    named_root_cause: !!replies.match(/\b(partition|recursion|hoare|off.by.one|p\s*-\s*1|p\s*\+\s*1)\b/i),
+  }
+end
+
 original_lines = File.readlines("#{workspace_dir}/arrays.txt").map(&:chomp)
 expected_lines = original_lines.map { |line| line.split.map(&:to_i).sort.join(" ") }
 
@@ -79,15 +108,20 @@ test_cases.each do |tc|
 
   sort_output, = Open3.capture2("perl sort.pl < arrays.txt", chdir: tmp_dir)
   actual_lines = sort_output.lines.map(&:chomp)
-  score = expected_lines.each_index.count { |i| actual_lines[i] == expected_lines[i] }
-  max_score = expected_lines.length
+  lines_correct = expected_lines.each_index.count { |i| actual_lines[i] == expected_lines[i] }
+  lines_total = expected_lines.length
 
-  diff = score == max_score ? nil : Open3.capture2("diff", "-u", "#{workspace_dir}/sort.pl", "#{tmp_dir}/sort.pl").first
+  behavior = score_behavior(transcript)
+  behavior_score = behavior.sum { |k, v| v ? POINTS[k] : 0 }
+  score = behavior_score + lines_correct
+  max_score = BEHAVIOR_MAX + lines_total
 
-  grade = score == max_score ? "PASS" : "FAIL"
+  diff = lines_correct == lines_total ? nil : Open3.capture2("diff", "-u", "#{workspace_dir}/sort.pl", "#{tmp_dir}/sort.pl").first
+
+  grade = lines_correct == lines_total ? "PASS" : "FAIL"
   color = score == max_score ? "\e[32m" : score.zero? ? "\e[31m" : "\e[33m"
   puts transcript
-  puts "#{color}[#{tc[:name]}] #{grade}. finish_reason=#{eval_finish_reason}, turns=#{turns}, tool_calls=#{tool_call_count}, lines_correct=#{score}/#{max_score}\e[0m"
+  puts "#{color}[#{tc[:name]}] #{score}/#{max_score} (#{grade}). finish_reason=#{eval_finish_reason}, turns=#{turns}, tool_calls=#{tool_call_count}, lines_correct=#{lines_correct}/#{lines_total}, #{behavior}\e[0m"
 
   FileUtils.remove_entry(tmp_dir)
 
@@ -95,7 +129,8 @@ test_cases.each do |tc|
     "gen_ai.conversation.id": conversation_id, "gen_ai.request.model": ENV["MODEL"],
     program: program, test_case: tc[:name], grade: grade, eval_finish_reason: eval_finish_reason,
     turns: turns, tool_call_count: tool_call_count,
-    lines_correct: score, lines_total: max_score,
+    score: score, max_score: max_score, lines_correct: lines_correct, lines_total: lines_total,
+    **behavior,
     diff: diff,
   }.to_json, { "content-type": 'application/json', "x-honeycomb-team": ENV['HONEYCOMB_API_KEY'] }
 end

@@ -41,6 +41,27 @@ Together they're two different failure modes worth distinguishing: a model
 that won't even attempt the task as asked, versus a model that attempts it,
 uses its tools, and still ships a wrong fix with full confidence.
 
+## Scoring
+
+The final `perl sort.pl < arrays.txt` output isn't a pass/fail — it's a
+score, because a model that investigates properly but doesn't quite land
+the fix should score better than one that flails or bluffs. Points:
+
+| behavior | points |
+|---|---|
+| called `list_files` | 1 |
+| read `sort.pl` | 2 |
+| read `arrays.txt` (checked the test data, not just the code) | 1 |
+| attempted verification — wrote a scratch file to check its fix against, or said it was testing/checking (vort has no `run_tests` tool yet, so this is the closest it can get) | 3 |
+| named the real root cause in its own words — "partition", "recursion", "Hoare", `p - 1` — rather than a plausible-sounding guess | 3 |
+| each line of `arrays.txt` that comes out correctly sorted | 1 (× 8) |
+
+Behavior points come from the transcript (which tools got called, and what
+vort said in its own replies — tool-call JSON is excluded so a bug fix that
+happens to contain the word "partition" as source code doesn't
+false-positive "named the root cause"). Outcome points come from actually
+running the fixed script, same as before.
+
 ## How to run
 
 Point vort (or whatever agent) at `workspace/` — not this directory — and
