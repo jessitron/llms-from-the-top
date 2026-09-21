@@ -8,6 +8,27 @@ import { trace } from "@opentelemetry/api";
 
 const DEFAULT_MAX_TOKENS = 200;
 
+// Honeycomb's Gen AI message format (see genai-message-format.md): each
+// message becomes { role, parts: [{ type: "text", content }] }, JSON-encoded
+// as a single string per gen_ai.input.messages / gen_ai.output.messages
+// attribute. Note the part field is `content`, not `text`.
+function genAiMessagePart(message) {
+  return {
+    role: message.role,
+    parts: [{ type: "text", content: typeof message.content === "string" ? message.content : "" }],
+  };
+}
+
+function genAiInputMessages(messages) {
+  return JSON.stringify(messages.map(genAiMessagePart));
+}
+
+function genAiOutputMessages(message, finishReason) {
+  const part = genAiMessagePart(message);
+  if (finishReason !== undefined) part.finish_reason = finishReason;
+  return JSON.stringify([part]);
+}
+
 export function checkAuth(request, env) {
   const key = request.headers.get("x-api-key");
   if (key === null) {
@@ -75,6 +96,10 @@ export async function routeToAnthropic(body, incoming, env) {
   span?.setAttribute("gen_ai.operation.name", "chat");
   span?.setAttribute("gen_ai.provider.name", "anthropic");
   span?.setAttribute("gen_ai.request.model", ANTHROPIC_MODEL);
+  span?.setAttribute("gen_ai.input.messages", genAiInputMessages(messages));
+  if (system !== undefined) {
+    span?.setAttribute("gen_ai.system_instructions", JSON.stringify([{ type: "text", content: system }]));
+  }
 
   const response = await fetchUpstream("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -96,6 +121,10 @@ export async function routeToAnthropic(body, incoming, env) {
     span?.setAttribute("gen_ai.usage.output_tokens", anthropicResponse.usage.output_tokens);
   }
   const content = anthropicResponse.content?.map((block) => block.text ?? "").join("") ?? "";
+  span?.setAttribute(
+    "gen_ai.output.messages",
+    genAiOutputMessages({ role: "assistant", content }, anthropicResponse.stop_reason),
+  );
   return Response.json({
     id: anthropicResponse.id,
     model: anthropicResponse.model,
@@ -167,6 +196,14 @@ export async function routeToBackend(request, env) {
 
   if (body?.model === "haiku") return routeToAnthropic(body, incoming, env);
 
+  const span = trace.getActiveSpan();
+  const isChat = incoming.pathname === "/v1/chat/completions" && body?.messages !== undefined;
+  if (isChat) {
+    span?.setAttribute("gen_ai.operation.name", "chat");
+    span?.setAttribute("gen_ai.request.model", body.model ?? "chat");
+    span?.setAttribute("gen_ai.input.messages", genAiInputMessages(body.messages));
+  }
+
   const backendUrl =
     body?.model === "base"
       ? env.BASE_BACKEND_URL
@@ -202,5 +239,20 @@ export async function routeToBackend(request, env) {
   }
   upstreamRequest.headers.set("host", upstream.hostname);
 
-  return fetchUpstream(upstreamRequest);
+  const response = await fetchUpstream(upstreamRequest);
+  if (!isChat || !response.ok) return response;
+
+  const responseBody = await response.json();
+  const choice = responseBody.choices?.[0];
+  if (choice?.message) {
+    span?.setAttribute("gen_ai.output.messages", genAiOutputMessages(choice.message, choice.finish_reason));
+  }
+  if (responseBody.model) span?.setAttribute("gen_ai.response.model", responseBody.model);
+  if (responseBody.usage?.prompt_tokens !== undefined) {
+    span?.setAttribute("gen_ai.usage.input_tokens", responseBody.usage.prompt_tokens);
+  }
+  if (responseBody.usage?.completion_tokens !== undefined) {
+    span?.setAttribute("gen_ai.usage.output_tokens", responseBody.usage.completion_tokens);
+  }
+  return Response.json(responseBody, { status: response.status });
 }

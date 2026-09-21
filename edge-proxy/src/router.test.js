@@ -1,4 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// router.js reads the active span via @opentelemetry/api's trace.getActiveSpan(),
+// which needs a real async-context manager (not installed here) to work across
+// awaits. Mock it with a stub span that just records setAttribute calls.
+const { capturedAttributes, fakeSpan } = vi.hoisted(() => {
+  const capturedAttributes = {};
+  const fakeSpan = {
+    setAttribute: (key, value) => {
+      capturedAttributes[key] = value;
+    },
+  };
+  return { capturedAttributes, fakeSpan };
+});
+
+vi.mock("@opentelemetry/api", async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, trace: { ...actual.trace, getActiveSpan: () => fakeSpan } };
+});
+
 import { checkAuth, routeToBackend, routeToAnthropic } from "./router.js";
 
 const env = {
@@ -42,6 +61,7 @@ describe("routeToBackend", () => {
   beforeEach(() => {
     fetchMock = vi.fn(async () => Response.json({ ok: true }));
     vi.stubGlobal("fetch", fetchMock);
+    for (const key of Object.keys(capturedAttributes)) delete capturedAttributes[key];
   });
 
   afterEach(() => {
@@ -142,6 +162,35 @@ describe("routeToBackend", () => {
     expect(res.status).toBe(504);
     expect(await res.text()).toMatch(/cold-starting/);
   });
+
+  it("sets gen_ai input/output message attributes for a chat completion", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        model: "chat",
+        choices: [{ message: { role: "assistant", content: "hi there" }, finish_reason: "stop" }],
+        usage: { prompt_tokens: 3, completion_tokens: 4 },
+      }),
+    );
+    await routeToBackend(
+      request("/v1/chat/completions", { body: { messages: [{ role: "user", content: "hi" }] } }),
+      env,
+    );
+
+    expect(capturedAttributes["gen_ai.operation.name"]).toBe("chat");
+    expect(capturedAttributes["gen_ai.request.model"]).toBe("chat");
+    expect(JSON.parse(capturedAttributes["gen_ai.input.messages"])).toEqual([
+      { role: "user", parts: [{ type: "text", content: "hi" }] },
+    ]);
+    expect(JSON.parse(capturedAttributes["gen_ai.output.messages"])).toEqual([
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: "hi there" }],
+        finish_reason: "stop",
+      },
+    ]);
+    expect(capturedAttributes["gen_ai.usage.input_tokens"]).toBe(3);
+    expect(capturedAttributes["gen_ai.usage.output_tokens"]).toBe(4);
+  });
 });
 
 describe("routeToAnthropic", () => {
@@ -158,6 +207,7 @@ describe("routeToAnthropic", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
+    for (const key of Object.keys(capturedAttributes)) delete capturedAttributes[key];
   });
 
   afterEach(() => {
@@ -208,5 +258,31 @@ describe("routeToAnthropic", () => {
     const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
     const res = await routeToAnthropic(body, incoming, env);
     expect(res.status).toBe(429);
+  });
+
+  it("sets gen_ai input/output message attributes, splitting out system instructions", async () => {
+    const body = {
+      messages: [
+        { role: "system", content: "be nice" },
+        { role: "user", content: "hi" },
+      ],
+    };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    await routeToAnthropic(body, incoming, env);
+
+    expect(capturedAttributes["gen_ai.operation.name"]).toBe("chat");
+    expect(JSON.parse(capturedAttributes["gen_ai.system_instructions"])).toEqual([
+      { type: "text", content: "be nice" },
+    ]);
+    expect(JSON.parse(capturedAttributes["gen_ai.input.messages"])).toEqual([
+      { role: "user", parts: [{ type: "text", content: "hi" }] },
+    ]);
+    expect(JSON.parse(capturedAttributes["gen_ai.output.messages"])).toEqual([
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: "hello there" }],
+        finish_reason: "end_turn",
+      },
+    ]);
   });
 });
