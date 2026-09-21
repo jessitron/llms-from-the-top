@@ -6,13 +6,13 @@ require "json"
 SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. But you don't do other jobs; in fact you are rather insulted when asked to do work that is not coding."
 
 TOOLS = [
-  { type: "function", function: 
-    { name: "list_files", 
-      description: "List files in the current directory", 
+  { type: "function", function:
+    { name: "list_files",
+      description: "List files in the current directory",
       parameters: { type: "object", properties: {} } } },
-  { type: "function", function: 
-    { name: "read_file", 
-      description: "Read a file's contents", 
+  { type: "function", function:
+    { name: "read_file",
+      description: "Read a file's contents",
       parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" } }, required: ["path"] } } }
 ]
 
@@ -23,9 +23,9 @@ loop do
   print "vort> "
   input = gets.chomp
   break if input in "exit" | "quit"
-  messages << { role: "user", content: input }
 
   loop do
+    messages << { role: "user", content: input }
     request = { model: model, messages: messages, tools: TOOLS }
     response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/chat/completions"), request.to_json, {
       "content-type": "application/json",
@@ -33,34 +33,21 @@ loop do
     }
     case response
     in Net::HTTPSuccess
-      message = JSON.parse(response.body).dig("choices", 0, "message")
-      puts "vort: #{message["content"]}"
-      message.delete("reasoning_content") # echoing this field back to vLLM 400s
-      # vLLM's mistral tool-call parser expects "[TOOL_CALLS]name[ARGS]{...}",
-      # but this model emits "[TOOL_CALLS]name{...}" (no [ARGS]) and the
-      # parser doesn't recognize it, so it comes back as plain content
-      # instead of a populated tool_calls array. Parse it ourselves.
-      if message["content"] =~ /\A\[TOOL_CALLS\](?<name>\w+)(?<args>\{.*\})\z/m
-        message["tool_calls"] = [ { "id" => rand(36**9).to_s(36).rjust(9, "0"), "type" => "function", "function" => { "name" => $~[:name], "arguments" => $~[:args] } } ]
-        message["content"] = nil
+      completion = JSON.parse(response.body)
+      assistant_message = completion.dig("choices", 0, "message", "content")
+      messages << { role: "assistant", content: assistant_message }
+      puts "vort: #{assistant_message}"
+      case assistant_message
+      when /\[TOOL_CALLS\]list_files/
+        result = Dir.children(".").join("\n")
+      when /\[TOOL_CALLS\]read_file.*"path":\s*"(?<path>[^"]+)"/m
+        filename = $~[:path]
+        result = File.exist?(filename) ? File.read(filename, encoding: "UTF-8")[0..2000] : "File not found <#{filename}>"
+      else
+        break # read the next message from the user
       end
-      messages << message
-      tool_calls = message["tool_calls"]
-      if tool_calls.nil? || tool_calls.empty?
-        break
-      end
-      tool_calls.each do |call|
-        name = call.dig("function", "name")
-        args = JSON.parse(call.dig("function", "arguments") || "{}")
-        result = case name
-        when "list_files"
-          Dir.children(".").join("\n")
-        when "read_file"
-          File.exist?(args["path"]) ? File.read(args["path"], encoding: "UTF-8")[0..2000] : "File not found <#{args["path"]}>"
-        end
-        puts "  #{name}(#{args}) -> #{result[0..80]}"
-        messages << { role: "tool", tool_call_id: call["id"], content: result }
-      end
+      puts "  -> #{result[0..80]}"
+      input = "[TOOL_RESULTS]#{result}[/TOOL_RESULTS]"
     else
       warn "Error: #{response.code} #{response.message}", response.body
       break
