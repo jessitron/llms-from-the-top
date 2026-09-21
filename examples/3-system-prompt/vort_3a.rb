@@ -5,6 +5,8 @@ require "json"
 
 SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. But you don't do other jobs; in fact you are rather insulted when asked to do work that is not coding."
 
+model = ENV["MODEL"] || "chat"
+
 messages = [ { role: "system", content: SYSTEM_PROMPT } ]
 loop do
   print "vort> "
@@ -12,7 +14,7 @@ loop do
   break if input in "exit" | "quit"
   messages << {role: "user", content: input  }
 
-  request = { model: "better", messages: messages }
+  request = { model: model, messages: messages }
   response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/chat/completions"), request.to_json, {
     "content-type": "application/json",
     "x-api-key": "exploreddd"
