@@ -29,13 +29,16 @@ end
 
 # late-arriving eval score, attached to the span above via trace.parent_id.
 # Honeycomb auto-assigns trace.span_id for these; don't set one.
-def post_eval_event(trace_id, parent_span_id, name, value, label, scored_at, explanation = nil)
-  post_event HONEYCOMB_DATASET, {
+# identity carries every field identifying what was evaluated (conversation,
+# model, program, test case, input...) so each event is graphable on its own,
+# without joining back to the parent span.
+def post_eval_event(identity, trace_id, parent_span_id, name, value, label, scored_at, explanation = nil)
+  post_event HONEYCOMB_DATASET, identity.merge(
     "meta.annotation_type": "span_event", "trace.trace_id": trace_id, "trace.parent_id": parent_span_id,
     name: "gen_ai.evaluation.result", "service.name": HONEYCOMB_SERVICE_NAME,
     "gen_ai.evaluation.name": name, "gen_ai.evaluation.score.label": label,
     "gen_ai.evaluation.score.value": value, "gen_ai.evaluation.explanation": explanation,
-  }, time: scored_at
+  ), time: scored_at
 end
 
 test_cases = [
@@ -99,6 +102,11 @@ test_cases.each do |tc|
   trace_id = SecureRandom.hex(16)
   span_id = SecureRandom.hex(8)
   span_start = Time.now
+  identity = {
+    "gen_ai.conversation.id": conversation_id, "gen_ai.agent.name": "vort", "gen_ai.request.model": ENV["MODEL"],
+    "app.eval.suite": File.basename(dir), "app.eval.program": program, "app.eval.test_case": tc[:name],
+    "app.eval.input": tc[:input], "app.eval.nudge": tc[:nudge],
+  }
   tmp_dir = Dir.mktmpdir("eval_4-")
   FileUtils.cp_r(Dir.glob("#{workspace_dir}/*"), tmp_dir)
 
@@ -156,20 +164,17 @@ test_cases.each do |tc|
 
   # the span the eval events below attach to — everything about the circumstance
   # being evaluated goes here so it's queryable/visible alongside the scores.
-  post_event HONEYCOMB_DATASET, {
+  post_event HONEYCOMB_DATASET, identity.merge(
     "trace.trace_id": trace_id, "trace.span_id": span_id, name: "invoke_agent",
     "service.name": HONEYCOMB_SERVICE_NAME, "duration_ms": ((span_end - span_start) * 1000).round,
-    "gen_ai.conversation.id": conversation_id, "gen_ai.operation.name": "invoke_agent",
-    "gen_ai.agent.name": "vort", "gen_ai.request.model": ENV["MODEL"],
-    "app.eval.suite": File.basename(dir), "app.eval.program": program, "app.eval.test_case": tc[:name],
-    "app.eval.input": tc[:input], "app.eval.nudge": tc[:nudge],
+    "gen_ai.operation.name": "invoke_agent",
     eval_finish_reason: eval_finish_reason, turns: turns, tool_call_count: tool_call_count,
     grade: grade, score: score, max_score: max_score, lines_correct: lines_correct, lines_total: lines_total,
-  }, time: span_start
+  ), time: span_start
 
   behavior.each do |name, passed|
-    post_eval_event trace_id, span_id, name.to_s, passed ? 1 : 0, passed ? "yes" : "no", scored_at
+    post_eval_event identity, trace_id, span_id, name.to_s, passed ? 1 : 0, passed ? "yes" : "no", scored_at
   end
-  post_eval_event trace_id, span_id, "sort_correctness",
+  post_eval_event identity, trace_id, span_id, "sort_correctness",
     lines_total.zero? ? 0 : lines_correct.to_f / lines_total, grade, scored_at, diff
 end
