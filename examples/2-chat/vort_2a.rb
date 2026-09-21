@@ -5,7 +5,7 @@ require "json"
 require "securerandom"
 
 # a random uuid
-CONVERSATION_ID = SecureRandom.uuid
+CONVERSATION_ID = ENV["CONVERSATION_ID"] || SecureRandom.uuid
 
 loop do
   print "vort> "

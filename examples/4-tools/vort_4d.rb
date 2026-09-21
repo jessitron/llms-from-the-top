@@ -21,7 +21,7 @@ HANDLERS = {
 MODEL = ENV["MODEL"] || "haiku"
 MAX_FILE_READ = 2000
 
-CONVERSATION_ID = SecureRandom.uuid
+CONVERSATION_ID = ENV["CONVERSATION_ID"] || SecureRandom.uuid
 
 messages = [ { role: "system", content: SYSTEM_PROMPT } ]
 loop do

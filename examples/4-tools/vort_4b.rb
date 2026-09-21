@@ -23,7 +23,7 @@ TOOLS = [
 
 model = ENV["MODEL"] || "better"
 MAX_FILE_READ = 4000
-CONVERSATION_ID = SecureRandom.uuid
+CONVERSATION_ID = ENV["CONVERSATION_ID"] || SecureRandom.uuid
 
 messages = [ { role: "system", content: SYSTEM_PROMPT } ]
 loop do

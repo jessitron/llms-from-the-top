@@ -3,6 +3,7 @@
 require 'open3'
 require 'net/http'
 require 'json'
+require 'securerandom'
 
 dir = __dir__
 program = ARGV[0] || "vort_1a.rb"
@@ -34,7 +35,8 @@ test_cases = [
 ]
 
 test_cases.each do |tc|
-  output, error_output, = Open3.capture3("ruby #{dir}/#{program}", stdin_data: tc[:input])
+  conversation_id = SecureRandom.uuid
+  output, error_output, = Open3.capture3({ "CONVERSATION_ID" => conversation_id }, "ruby #{dir}/#{program}", stdin_data: tc[:input])
   answer = output.sub(/\Avort> /, '')
 
   puts answer
@@ -55,6 +57,7 @@ test_cases.each do |tc|
   puts "#{color}#{tc[:input].strip}?  #{grade}. Length: #{answer.length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}\e[0m"
 
   Net::HTTP.post URI('https://api.honeycomb.io/1/events/llms-from-the-top-evals'), {
+    "gen_ai.conversation.id": conversation_id,
     program: program, input: tc[:input], answer: answer, grade: grade, score: score, pass_score: tc[:pass_score], reasons: scoreReasons.join(', '),
   }.to_json, { "content-type": 'application/json', "x-honeycomb-team": ENV['HONEYCOMB_API_KEY'] }
 end

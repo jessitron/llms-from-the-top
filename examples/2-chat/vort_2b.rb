@@ -4,7 +4,7 @@ require "net/http"
 require "json"
 require "securerandom"
 
-CONVERSATION_ID = SecureRandom.uuid
+CONVERSATION_ID = ENV["CONVERSATION_ID"] || SecureRandom.uuid
 
 prompt = ""
 loop do
