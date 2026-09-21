@@ -3,7 +3,7 @@
 require "net/http"
 require "json"
 
-model = ENV["MODEL"] || "better"
+model = ENV["MODEL"] || "chat"
 
 messages = []
 loop do

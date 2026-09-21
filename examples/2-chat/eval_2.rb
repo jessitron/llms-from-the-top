@@ -69,6 +69,6 @@ test_cases.each do |tc|
   puts "#{color}#{tc[:input].strip}?  #{grade}. Length: #{answer.length},  Score: #{score}, Reasons: #{scoreReasons.join(', ')}\e[0m"
 
   Net::HTTP.post URI('https://api.honeycomb.io/1/events/llms-from-the-top-evals'), {
-    program: program, input: tc[:input], answer: answer, grade: grade, score: score, pass_score: tc[:pass_score], reasons: scoreReasons.join(', '),
+    program: program, model: ENV["MODEL"], input: tc[:input], answer: answer, grade: grade, score: score, pass_score: tc[:pass_score], reasons: scoreReasons.join(', '),
   }.to_json, { "content-type": 'application/json', "x-honeycomb-team": ENV['HONEYCOMB_API_KEY'] }
 end
