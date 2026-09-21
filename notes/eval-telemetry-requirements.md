@@ -1,3 +1,14 @@
+> **Note:** this describes Honeycomb's raw Events API, which the eval harness
+> used originally. It has since moved to sending OTLP directly to the shared
+> workshop collector instead (see `examples/eval_telemetry.rb`), because
+> that collector needs no API key and already fans out to both Honeycomb
+> teams. Since eval scoring here always finishes before the process exits,
+> the harness attaches evaluation events to the span in one OTLP export
+> rather than using the late-arriving-event trick described below — but the
+> attribute shapes below (`gen_ai.evaluation.*`, `meta.annotation_type`, etc.)
+> are exactly what it still sends, and this doc remains the reference for
+> anyone who does need Events API POSTs directly (e.g. truly async scoring).
+
 # Getting an eval to show up in Honeycomb's Agent Timeline
 
 Two pieces of telemetry are needed: a **span** for the eval to attach to (if you

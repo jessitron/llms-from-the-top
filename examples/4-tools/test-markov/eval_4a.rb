@@ -8,38 +8,13 @@ require 'net/http'
 require 'json'
 require 'securerandom'
 require 'time'
+require_relative '../../eval_telemetry'
 
 dir = __dir__
 vort_dir = File.dirname(dir)
 program = ARGV[0] || "vort_4d.rb"
 workspace_dir = "#{dir}/workspace"
 max_nudges = 5
-
-HONEYCOMB_DATASET = "llms-from-the-top-evals"
-HONEYCOMB_SERVICE_NAME = "llms-from-the-top-eval-harness"
-
-# time: when this row actually happened, since it's usually posted late (after
-# the span ended, or after grading). Without it Honeycomb stamps receipt time,
-# which is wrong for anything posted after the fact.
-def post_event(dataset, row, time:)
-  Net::HTTP.post URI("https://api.honeycomb.io/1/events/#{dataset}"), row.compact.to_json,
-    { "content-type": "application/json", "x-honeycomb-team": ENV["HONEYCOMB_API_KEY"],
-      "x-honeycomb-event-time": time.utc.iso8601(3) }
-end
-
-# late-arriving eval score, attached to the span above via trace.parent_id.
-# Honeycomb auto-assigns trace.span_id for these; don't set one.
-# identity carries every field identifying what was evaluated (conversation,
-# model, program, test case, input...) so each event is graphable on its own,
-# without joining back to the parent span.
-def post_eval_event(identity, trace_id, parent_span_id, name, value, label, scored_at, explanation = nil)
-  post_event HONEYCOMB_DATASET, identity.merge(
-    "meta.annotation_type": "span_event", "trace.trace_id": trace_id, "trace.parent_id": parent_span_id,
-    name: "gen_ai.evaluation.result", "service.name": HONEYCOMB_SERVICE_NAME,
-    "gen_ai.evaluation.name": name, "gen_ai.evaluation.score.label": label,
-    "gen_ai.evaluation.score.value": value, "gen_ai.evaluation.explanation": explanation,
-  ), time: scored_at
-end
 
 test_cases = [
   {
@@ -119,15 +94,8 @@ test_cases.each do |tc|
 
   FileUtils.remove_entry(tmp_dir)
 
-  # the span the eval event below attaches to — everything about the circumstance
-  # being evaluated goes here so it's queryable/visible alongside the score.
-  post_event HONEYCOMB_DATASET, identity.merge(
-    "trace.trace_id": trace_id, "trace.span_id": span_id, name: "invoke_agent",
-    "service.name": HONEYCOMB_SERVICE_NAME, "duration_ms": ((span_end - span_start) * 1000).round,
-    "gen_ai.operation.name": "invoke_agent",
-    eval_finish_reason: eval_finish_reason, turns: turns, tool_call_count: tool_call_count,
-    grade: grade, markov_word_count: words.length, markov_unique_words: words.uniq.length,
-  ), time: span_start
-
-  post_eval_event identity, trace_id, span_id, "markov_fixed", fixed ? 1 : 0, grade, scored_at, diff
+  post_eval_span identity, trace_id, span_id, span_start, span_end,
+    { eval_finish_reason: eval_finish_reason, turns: turns, tool_call_count: tool_call_count,
+      grade: grade, markov_word_count: words.length, markov_unique_words: words.uniq.length }, scored_at,
+    [["markov_fixed", fixed ? 1 : 0, grade, diff]]
 end
