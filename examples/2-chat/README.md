@@ -55,6 +55,7 @@ content-type: application/json
 x-api-key: <ask Jess for it>
 (optional) x-conversation-id: <your unique ID for this agent run>
 (optional) user-agent: <your name>
+(optional) x-agent-name: <your agent's name>
 ```
 
 Input format:
