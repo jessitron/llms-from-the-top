@@ -66,3 +66,17 @@ side anymore.
 
 `./stop` and `./stop-better` — don't rely on `scaledown_window` alone for
 multi-hour idle gaps (e.g. overnight between workshop days).
+
+# Shutting down after the workshop
+
+[] Turn off the collector in my orion cluster (jessitron/infra)
+
+[] Turn off both modal apps with ./stop
+
+[] turn off the cloudflare worker in edge-proxy (or at least make the API key obscure)
+
+[] tell modal not to bill me anymore
+
+[] turn off cloudflare upgraded plan
+
+[] track expenses for taxes
