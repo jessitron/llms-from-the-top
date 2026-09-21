@@ -42,7 +42,7 @@ Those `[INST]` delimiters are specific to this model, and nobody wants to send t
 
 Example: vort_2c.rb
 
-The new API looks like OpenAI's chat completions API. (No formal OpenAPI spec exists for it yet.)
+The new API looks like OpenAI's chat completions API. (The [full API reference](https://developers.openai.com/api/reference/resources/chat) is huge. My endpoint doesn't support it all, and some models on my endpoint support more than others.)
 
 URI: https://llms-from-the-top.jessitron.com/v1/chat/completions
 
@@ -53,6 +53,8 @@ Headers:
 ```
 content-type: application/json
 x-api-key: <ask Jess for it>
+(optional) x-conversation-id: <your unique ID for this agent run>
+(optional) user-agent: <your name>
 ```
 
 Input format:
@@ -61,7 +63,9 @@ Input format:
 {
   "model": "better",
   "messages": [
-    { "role": "user", "content": "What is the capital of France?" }
+    { "role": "user", "content": "What is the capital of France?" },
+    { "role": "assistant", "content": "Paris" },
+    { "role": "user", "content": "What is it famous for?" }
   ]
 }
 ```

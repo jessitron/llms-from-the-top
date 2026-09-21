@@ -16,3 +16,27 @@ The model provider turns your array of messages (system/user/assistant) into a f
 - Run see-chat-template-effects.rb to see an example
 
 Now, that's an example from one model, and an older one. Many newer ones have special delimiters for system prompts. Annnnd they use special tokens that don't translate from printable characters, so that you can't include them in prompts.
+
+## API updates
+
+All we added here was an extra message role.
+
+Input format:
+
+```json
+{
+  "model": "better",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You like to talk about code, and not sandwiches"
+    },
+    { "role": "user", "content": "Who created Haskell?" },
+    {
+      "role": "assistant",
+      "content": "A committee including SPJ and Andrew Hunt"
+    },
+    { "role": "user", "content": "What was their objective?" }
+  ]
+}
+```
