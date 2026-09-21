@@ -18,13 +18,19 @@ otherwise — rewriting the Host header so Modal's edge routes it correctly.
 README), so this is the seam that lets callers pick a model by name
 instead of knowing which URL serves it.
 
-`"model": "haiku"` is the odd one out: instead of a Modal backend, it calls
-the real Anthropic API (`claude-haiku-4-5-20251001`) directly, translating
-between the OpenAI-shaped `/v1/chat/completions` request/response the
-examples use and Anthropic's Messages API shape. It's a workshop backup in
-case Modal is misbehaving — Modal is the point of the workshop (cold
-starts and all), but a "just works" fallback is worth having. Only
-`/v1/chat/completions` is supported for it.
+`"model": "haiku"` and `"model": "luna"` are the odd ones out: instead of a
+Modal backend, they call the real Anthropic and OpenAI APIs directly.
+They're workshop backups in case Modal is misbehaving — Modal is the point
+of the workshop (cold starts and all), but a "just works" fallback is worth
+having. Only `/v1/chat/completions` is supported for either.
+
+`"haiku"` calls Anthropic's Messages API (`claude-haiku-4-5-20251001`),
+translating between the OpenAI-shaped `/v1/chat/completions` request/response
+the examples use and Anthropic's Messages API shape.
+
+`"luna"` calls OpenAI's API (`gpt-4o-mini`) directly at
+`/v1/chat/completions` — no translation needed, since OpenAI's request and
+response shapes already match what this proxy speaks.
 
 ## Telemetry
 
@@ -47,6 +53,8 @@ span, and vLLM's own engine span all land in one trace — see
    `llm-api` (see `modal secret create honeycomb ...` in `../llm-api/README.md`).
 5. `wrangler secret put ANTHROPIC_API_KEY` — an Anthropic API key, used
    only for the `"model": "haiku"` backup route.
+6. `wrangler secret put OPENAI_API_KEY` — an OpenAI API key, used only for
+   the `"model": "luna"` backup route.
 
 No DNS step needed beyond that: `wrangler.toml` uses `custom_domain = true`
 on the route, which tells Cloudflare to manage the DNS record itself as a
@@ -84,6 +92,10 @@ curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
 curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
   -H 'content-type: application/json' \
   -d '{"model": "haiku", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 5}'
+
+curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
+  -H 'content-type: application/json' \
+  -d '{"model": "luna", "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 5}'
 ```
 
 ## If the Modal backend URLs change

@@ -310,7 +310,63 @@ export async function routeToAnthropic(body, incoming, env) {
   });
 }
 
-export const VALID_MODELS = ["base", "chat", "better", "haiku"];
+const OPENAI_MODEL = "gpt-4o-mini";
+
+// Unlike Anthropic's Messages API, OpenAI's /v1/chat/completions already
+// matches the OpenAI-shaped request/response this proxy speaks — messages,
+// tools, tool_choice, and the response's choices[0].message all pass through
+// unchanged. So there's no translation step here, just a model swap, auth,
+// and the same gen_ai.* telemetry as routeToBackend below.
+export async function routeToOpenAI(body, incoming, env) {
+  if (incoming.pathname !== "/v1/chat/completions") {
+    return new Response(
+      `model "luna" only supports /v1/chat/completions, got ${incoming.pathname}`,
+      { status: 400 },
+    );
+  }
+
+  const span = trace.getActiveSpan();
+  span?.setAttribute("gen_ai.operation.name", "chat");
+  span?.setAttribute("gen_ai.provider.name", "openai");
+  span?.setAttribute("gen_ai.request.model", OPENAI_MODEL);
+  span?.setAttribute("app.raw_input_messages", JSON.stringify(body.messages));
+  span?.setAttribute("gen_ai.input.messages", genAiInputMessages(body.messages));
+  const lastInput = lastUserInputText(body.messages);
+  if (lastInput !== undefined) span?.setAttribute("jess.last_input", lastInput);
+  if (body.tools !== undefined) {
+    span?.setAttribute("gen_ai.tool.definitions", genAiToolDefinitions(body.tools));
+  }
+
+  const response = await fetchUpstream("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({ ...body, model: OPENAI_MODEL }),
+  });
+  if (!response.ok) return response;
+
+  const openAiResponse = await response.json();
+  const choice = openAiResponse.choices?.[0];
+  if (choice?.message) {
+    span?.setAttribute("app.raw_output_message", JSON.stringify(choice.message));
+    span?.setAttribute("gen_ai.output.messages", genAiOutputMessages(choice.message, choice.finish_reason));
+    if (typeof choice.message.content === "string") {
+      span?.setAttribute("jess.completion", choice.message.content);
+    }
+  }
+  if (openAiResponse.model) span?.setAttribute("gen_ai.response.model", openAiResponse.model);
+  if (openAiResponse.usage?.prompt_tokens !== undefined) {
+    span?.setAttribute("gen_ai.usage.input_tokens", openAiResponse.usage.prompt_tokens);
+  }
+  if (openAiResponse.usage?.completion_tokens !== undefined) {
+    span?.setAttribute("gen_ai.usage.output_tokens", openAiResponse.usage.completion_tokens);
+  }
+  return Response.json(openAiResponse, { status: response.status });
+}
+
+export const VALID_MODELS = ["base", "chat", "better", "haiku", "luna"];
 
 export async function routeToBackend(request, env) {
   const incoming = new URL(request.url);
@@ -361,6 +417,7 @@ export async function routeToBackend(request, env) {
   }
 
   if (body?.model === "haiku") return routeToAnthropic(body, incoming, env);
+  if (body?.model === "luna") return routeToOpenAI(body, incoming, env);
 
   const span = trace.getActiveSpan();
   const isChat = incoming.pathname === "/v1/chat/completions" && body?.messages !== undefined;

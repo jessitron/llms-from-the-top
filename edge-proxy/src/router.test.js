@@ -18,11 +18,12 @@ vi.mock("@opentelemetry/api", async (importOriginal) => {
   return { ...actual, trace: { ...actual.trace, getActiveSpan: () => fakeSpan } };
 });
 
-import { checkAuth, routeToBackend, routeToAnthropic } from "./router.js";
+import { checkAuth, routeToBackend, routeToAnthropic, routeToOpenAI } from "./router.js";
 
 const env = {
   API_KEY: "secret-key",
   ANTHROPIC_API_KEY: "anthropic-secret",
+  OPENAI_API_KEY: "openai-secret",
   BASE_BACKEND_URL: "https://base.example.com",
   CHAT_BACKEND_URL: "https://chat.example.com",
   BETTER_BACKEND_URL: "https://better.example.com",
@@ -125,6 +126,21 @@ describe("routeToBackend", () => {
     );
     const [upstreamRequest] = fetchMock.mock.calls[0];
     expect(upstreamRequest.url).toBe("https://better.example.com/v1/chat/completions");
+  });
+
+  it("routes model: luna to OpenAI directly instead of a Modal backend", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        model: "gpt-4o-mini",
+        choices: [{ message: { role: "assistant", content: "hi" }, finish_reason: "stop" }],
+      }),
+    );
+    await routeToBackend(
+      request("/v1/chat/completions", { body: { model: "luna", messages: [{ role: "user", content: "hi" }] } }),
+      env,
+    );
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.openai.com/v1/chat/completions");
   });
 
   it("fills in a default max_tokens on /v1/completions", async () => {
@@ -563,6 +579,146 @@ describe("routeToAnthropic", () => {
           { type: "text", content: "Let me check that." },
           { type: "tool_call", id: "toolu_1", name: "get_weather", arguments: '{"city":"Chicago"}' },
         ],
+        finish_reason: "tool_calls",
+      },
+    ]);
+  });
+});
+
+describe("routeToOpenAI", () => {
+  let fetchMock;
+
+  beforeEach(() => {
+    fetchMock = vi.fn(async () =>
+      Response.json({
+        id: "chatcmpl_123",
+        model: "gpt-4o-mini",
+        choices: [{ index: 0, message: { role: "assistant", content: "hello there" }, finish_reason: "stop" }],
+        usage: { prompt_tokens: 10, completion_tokens: 5 },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    for (const key of Object.keys(capturedAttributes)) delete capturedAttributes[key];
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("only supports /v1/chat/completions", async () => {
+    const body = { messages: [{ role: "user", content: "hi" }] };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/completions");
+    const res = await routeToOpenAI(body, incoming, env);
+    expect(res.status).toBe(400);
+    expect(await res.text()).toMatch(/only supports \/v1\/chat\/completions/);
+  });
+
+  it("forwards the request to OpenAI with the real model name and bearer auth", async () => {
+    const body = { model: "luna", messages: [{ role: "user", content: "hi" }] };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    await routeToOpenAI(body, incoming, env);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.openai.com/v1/chat/completions");
+    expect(init.headers.authorization).toBe("Bearer openai-secret");
+    const sentBody = JSON.parse(init.body);
+    expect(sentBody.model).toBe("gpt-4o-mini");
+    expect(sentBody.messages).toEqual([{ role: "user", content: "hi" }]);
+  });
+
+  it("returns the OpenAI response body unchanged", async () => {
+    const body = { messages: [{ role: "user", content: "hi" }] };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    const res = await routeToOpenAI(body, incoming, env);
+    const json = await res.json();
+
+    expect(json.choices[0].message).toEqual({ role: "assistant", content: "hello there" });
+    expect(json.choices[0].finish_reason).toBe("stop");
+    expect(json.usage).toEqual({ prompt_tokens: 10, completion_tokens: 5 });
+  });
+
+  it("passes through a non-ok response from OpenAI unchanged", async () => {
+    fetchMock.mockResolvedValue(new Response("rate limited", { status: 429 }));
+    const body = { messages: [{ role: "user", content: "hi" }] };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    const res = await routeToOpenAI(body, incoming, env);
+    expect(res.status).toBe(429);
+  });
+
+  it("sets gen_ai input/output message attributes", async () => {
+    const body = { messages: [{ role: "user", content: "hi" }] };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    await routeToOpenAI(body, incoming, env);
+
+    expect(capturedAttributes["gen_ai.operation.name"]).toBe("chat");
+    expect(capturedAttributes["gen_ai.provider.name"]).toBe("openai");
+    expect(capturedAttributes["gen_ai.request.model"]).toBe("gpt-4o-mini");
+    expect(capturedAttributes["gen_ai.response.model"]).toBe("gpt-4o-mini");
+    expect(JSON.parse(capturedAttributes["gen_ai.input.messages"])).toEqual([
+      { role: "user", parts: [{ type: "text", content: "hi" }] },
+    ]);
+    expect(JSON.parse(capturedAttributes["gen_ai.output.messages"])).toEqual([
+      { role: "assistant", parts: [{ type: "text", content: "hello there" }], finish_reason: "stop" },
+    ]);
+    expect(capturedAttributes["gen_ai.usage.input_tokens"]).toBe(10);
+    expect(capturedAttributes["gen_ai.usage.output_tokens"]).toBe(5);
+    expect(capturedAttributes["jess.last_input"]).toBe("hi");
+    expect(capturedAttributes["jess.completion"]).toBe("hello there");
+  });
+
+  it("sets gen_ai.tool.definitions from the OpenAI tools array", async () => {
+    const body = {
+      messages: [{ role: "user", content: "what's the weather?" }],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "get_weather",
+            description: "Get the weather for a city",
+            parameters: { type: "object", properties: { city: { type: "string" } } },
+          },
+        },
+      ],
+    };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    await routeToOpenAI(body, incoming, env);
+
+    expect(JSON.parse(capturedAttributes["gen_ai.tool.definitions"])).toEqual([
+      {
+        type: "function",
+        name: "get_weather",
+        description: "Get the weather for a city",
+        parameters: { type: "object", properties: { city: { type: "string" } } },
+      },
+    ]);
+  });
+
+  it("captures raw and translated gen_ai output messages when the response includes tool_calls", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        model: "gpt-4o-mini",
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: [
+                { id: "call_1", type: "function", function: { name: "get_weather", arguments: '{"city":"Chicago"}' } },
+              ],
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
+      }),
+    );
+    const body = { messages: [{ role: "user", content: "what's the weather in Chicago?" }] };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    await routeToOpenAI(body, incoming, env);
+
+    expect(JSON.parse(capturedAttributes["gen_ai.output.messages"])).toEqual([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call_1", name: "get_weather", arguments: '{"city":"Chicago"}' }],
         finish_reason: "tool_calls",
       },
     ]);

@@ -3,8 +3,9 @@
  *
  * Routes to one of three Modal-hosted vLLM backends (base, chat, or better
  * model) by the request body's `model` field, defaulting to the chat model.
- * `model: "haiku"` instead calls the real Anthropic API — a workshop backup
- * for when Modal is being Modal (see routeToAnthropic in router.js). Requires
+ * `model: "haiku"` and `model: "luna"` instead call the real Anthropic and
+ * OpenAI APIs directly — workshop backups for when Modal is being Modal
+ * (see routeToAnthropic / routeToOpenAI in router.js). Requires
  * an `x-api-key` header matching the API_KEY secret — see checkAuth below.
  * Set it with `wrangler secret put API_KEY`.
  *
