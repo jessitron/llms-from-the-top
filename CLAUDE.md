@@ -50,6 +50,12 @@ Whenever the user mentions something additional to do, before you start investig
 
 When you want me to do something, make me a yak! Start the name with 👩🏽‍🦱 so that I can tell it's a job for a human.
 
+## Observability: accessing Honeycomb
+
+Use the "honeycomb-modernity" MCP to look at traces in Honeycomb. If it is missing, ask the user to set it up.
+
+Our data goes to environment llms-from-the-top.
+
 ## Finishing a worktree: use `scripts/merge-worktree.sh`
 
 When work in a worktree is done, merge it into local main with this script rather than doing the merge/cleanup by hand. Run it from the main checkout (repo root), not from inside the worktree — use ExitWorktree first.
