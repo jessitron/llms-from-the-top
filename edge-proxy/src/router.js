@@ -121,8 +121,9 @@ export async function routeToBackend(request, env) {
   const incoming = new URL(request.url);
 
   let body;
+  let raw;
   if (request.method === "POST") {
-    const raw = await request.text();
+    raw = await request.text();
     try {
       body = raw === "" ? undefined : JSON.parse(raw);
     } catch (err) {
@@ -177,6 +178,15 @@ export async function routeToBackend(request, env) {
       method: request.method,
       headers: request.headers,
       body: JSON.stringify(body),
+    });
+  } else if (request.method === "POST") {
+    // request.text() above already drained the body stream, so re-reading it
+    // via `new Request(upstream, request)` would throw "This ReadableStream
+    // is disturbed" — reuse the already-read `raw` text instead.
+    upstreamRequest = new Request(upstream, {
+      method: request.method,
+      headers: request.headers,
+      body: raw || undefined,
     });
   } else {
     upstreamRequest = new Request(upstream, request);

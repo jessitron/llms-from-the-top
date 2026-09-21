@@ -127,6 +127,12 @@ describe("routeToBackend", () => {
     expect(upstreamRequest.url).toBe("https://chat.example.com/v1/models");
   });
 
+  it("passes through a bodyless POST without crashing", async () => {
+    await routeToBackend(request("/", {}), env);
+    const [upstreamRequest] = fetchMock.mock.calls[0];
+    expect(upstreamRequest.url).toBe("https://chat.example.com/");
+  });
+
   it("returns a 504 when the backend times out", async () => {
     fetchMock.mockRejectedValue(new DOMException("Aborted", "TimeoutError"));
     const res = await routeToBackend(request("/v1/models", { method: "GET" }), env);
