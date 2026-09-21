@@ -5,7 +5,8 @@
  * model) by the request body's `model` field, defaulting to the chat model.
  * `model: "haiku"` instead calls the real Anthropic API — a workshop backup
  * for when Modal is being Modal (see routeToAnthropic). Requires an
- * `x-api-key: exploreddd` header — see checkAuth below.
+ * `x-api-key` header matching the API_KEY secret — see checkAuth below.
+ * Set it with `wrangler secret put API_KEY`.
  *
  * Wrapped with `instrument()` from @microlabs/otel-cf-workers (Honeycomb's
  * recommended Workers OTel library — it doesn't need Node polyfills, unlike
@@ -32,7 +33,6 @@ import { instrument, OTLPExporter, BatchTraceSpanProcessor } from "@microlabs/ot
 import { context, propagation, trace } from "@opentelemetry/api";
 import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from "@opentelemetry/core";
 
-const API_KEY = "exploreddd";
 const DEFAULT_MAX_TOKENS = 200;
 
 class BaggageSpanProcessor {
@@ -51,7 +51,7 @@ class BaggageSpanProcessor {
   }
 }
 
-function checkAuth(request) {
+function checkAuth(request, env) {
   const key = request.headers.get("x-api-key");
   if (key === null) {
     return new Response(
@@ -59,7 +59,7 @@ function checkAuth(request) {
       { status: 401 },
     );
   }
-  if (key !== API_KEY) {
+  if (key !== env.API_KEY) {
     return new Response(
       "Unauthorized: wrong x-api-key value. Ask Jess for the right value.",
       { status: 401 },
@@ -182,7 +182,7 @@ async function routeToBackend(request, env) {
 
 const handler = {
   async fetch(request, env) {
-    const authError = checkAuth(request);
+    const authError = checkAuth(request, env);
     if (authError) return authError;
 
     const conversationId = request.headers.get("x-conversation-id") || crypto.randomUUID();
