@@ -9,11 +9,15 @@ TOOLS = [
   { type: "function", function:
     { name: "list_files",
       description: "List files in the current directory",
-      parameters: { type: "object", properties: {} } } },
+      parameters: { type: "object", properties: {} } 
+    }
+  },
   { type: "function", function:
     { name: "read_file",
       description: "Read a file's contents",
-      parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" } }, required: ["path"] } } }
+      parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" } }, required: ["path"] } 
+    }
+  }
 ]
 
 model = ENV["MODEL"] || "better"

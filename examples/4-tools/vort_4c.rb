@@ -10,7 +10,8 @@ TOOLS = [
   { type: "function", function: { name: "read_file", description: "Read a file's contents", parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" } }, required: ["path"] } } }
 ]
 
-model = ENV["MODEL"] || "haiku"
+MODEL = ENV["MODEL"] || "haiku"
+MAX_FILE_READ = 2000
 
 messages = [ { role: "system", content: SYSTEM_PROMPT } ]
 loop do
@@ -20,7 +21,7 @@ loop do
   messages << { role: "user", content: input }
 
   loop do
-    request = { model: model, messages: messages, tools: TOOLS }
+    request = { model: MODEL, messages: messages, tools: TOOLS }
     response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/chat/completions"), request.to_json, {
       "content-type": "application/json",
       "x-api-key": "exploreddd"
@@ -41,7 +42,7 @@ loop do
         when "list_files"
           Dir.children(".").join("\n")
         when "read_file"
-          File.exist?(args["path"]) ? File.read(args["path"], encoding: "UTF-8")[0..2000] : "File not found <#{args["path"]}>"
+          File.exist?(args["path"]) ? File.read(args["path"], encoding: "UTF-8")[0..MAX_FILE_READ] : "File not found <#{args["path"]}>"
         end
         puts "  #{name}(#{args}) -> #{result[0..80]}"
         messages << { role: "tool", tool_call_id: call["id"], content: result }
