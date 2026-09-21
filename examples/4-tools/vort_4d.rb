@@ -50,7 +50,11 @@ loop do
       tool_calls.each do |call|
         name = call.dig("function", "name")
         args = JSON.parse(call.dig("function", "arguments") || "{}")
-        result = HANDLERS[name]&.call(args)
+        result = begin
+          HANDLERS[name] ? HANDLERS[name].call(args) : "Unknown tool <#{name}>"
+        rescue => e
+          "Error: #{e.message}"
+        end
         puts "  #{name}(#{args}) -> #{result[0..80]}"
         messages << { role: "tool", tool_call_id: call["id"], content: result }
       end
