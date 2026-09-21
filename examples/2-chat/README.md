@@ -42,20 +42,40 @@ Those `[INST]` delimiters are specific to this model, and nobody wants to send t
 
 Example: vort_2c.rb
 
-The new API, as standardized by OpenAPI (TODO: link)
+The new API looks like OpenAI's chat completions API. (No formal OpenAPI spec exists for it yet.)
 
-URI: https://llms-from-the-top.jessitron.com
+URI: https://llms-from-the-top.jessitron.com/v1/chat/completions
 
 Method: POST
 
 Headers:
 
-TODO
+```
+content-type: application/json
+x-api-key: <ask Jess for it>
+```
 
 Input format:
 
-TODO
+```json
+{
+  "model": "better",
+  "messages": [
+    { "role": "user", "content": "What is the capital of France?" }
+  ]
+}
+```
+
+`model` is optional; it defaults to `"chat"`. Other valid values: `"base"`, `"better"`.
 
 Output format:
 
-TODO
+```json
+{
+  "choices": [
+    {
+      "message": { "role": "assistant", "content": "..." }
+    }
+  ]
+}
+```
