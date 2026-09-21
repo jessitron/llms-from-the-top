@@ -53,11 +53,9 @@ span, and vLLM's own engine span all land in one trace — see
 2. `wrangler login` — opens a browser to authorize against your Cloudflare
    account that owns the jessitron.com zone.
 3. `npm install` — pulls in `@microlabs/otel-cf-workers`.
-4. `wrangler secret put HONEYCOMB_API_KEY` — same Honeycomb API key used by
-   `llm-api` (see `modal secret create honeycomb ...` in `../llm-api/README.md`).
-5. `wrangler secret put ANTHROPIC_API_KEY` — an Anthropic API key, used
+4. `wrangler secret put ANTHROPIC_API_KEY` — an Anthropic API key, used
    only for the `"model": "haiku"` backup route.
-6. `wrangler secret put OPENAI_API_KEY` — an OpenAI API key, used for the
+5. `wrangler secret put OPENAI_API_KEY` — an OpenAI API key, used for the
    `"model": "luna"` backup route and the `"model": "nano"` weak-model demo
    route.
 

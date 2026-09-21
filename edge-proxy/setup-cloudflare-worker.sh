@@ -219,24 +219,6 @@ else
   fi
 fi
 
-# ── Stage 3: Honeycomb secret ─────────────────────────────────────────────
-stage "Set the Honeycomb API key"
-say "The Worker sends traces to Honeycomb, joining the same trace as llm-api"
-say "(see README.md's Telemetry section). It needs the same API key llm-api"
-say "uses, as a Wrangler secret (not committed — separate from wrangler.toml)."
-if npx --yes wrangler secret list 2>/dev/null | grep -q '"HONEYCOMB_API_KEY"'; then
-  say "HONEYCOMB_API_KEY secret already set."
-else
-  ask_secret HONEYCOMB_API_KEY "Honeycomb API key (same one used for 'modal secret create honeycomb'):"
-  if [[ -n "$HONEYCOMB_API_KEY" ]]; then
-    printf '%s' "$HONEYCOMB_API_KEY" | npx --yes wrangler secret put HONEYCOMB_API_KEY
-    say "${GREEN}✓ set${RESET} Wrangler secret HONEYCOMB_API_KEY"
-  else
-    warn "Skipping — set it later with: wrangler secret put HONEYCOMB_API_KEY"
-    SKIPPED+=("wrangler secret put HONEYCOMB_API_KEY")
-  fi
-fi
-
 # ── Stage 4: Deploy the Worker ────────────────────────────────────────────
 stage "Deploy the Worker"
 say "Publishing the Worker and attaching"

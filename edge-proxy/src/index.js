@@ -83,8 +83,7 @@ const config = (env) => ({
     new BaggageSpanProcessor(),
     new BatchTraceSpanProcessor(
       new OTLPExporter({
-        url: "https://api.honeycomb.io/v1/traces",
-        headers: { "x-honeycomb-team": env.HONEYCOMB_API_KEY },
+        url: "https://workshop.jessitron.honeydemo.io/v1/traces",
       }),
     ),
   ],

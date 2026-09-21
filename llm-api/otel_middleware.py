@@ -70,7 +70,6 @@ _provider.add_span_processor(
     BatchSpanProcessor(
         OTLPSpanExporter(
             endpoint=os.environ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"],
-            headers={"x-honeycomb-team": os.environ["HONEYCOMB_API_KEY"]},
         )
     )
 )
@@ -94,7 +93,6 @@ def build_otel_log_handler():
         BatchLogRecordProcessor(
             OTLPLogExporter(
                 endpoint=os.environ["OTEL_EXPORTER_OTLP_LOGS_ENDPOINT"],
-                headers={"x-honeycomb-team": os.environ["HONEYCOMB_API_KEY"]},
             )
         )
     )

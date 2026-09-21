@@ -112,13 +112,9 @@ never records prompt/completion content (it's metrics-only), so
 `traceparent` header so its span and vLLM's `llm_request` span link into one
 trace even though each runs its own independent `TracerProvider`.
 
-One-time setup, before your first deploy:
-
-```
-modal secret create honeycomb HONEYCOMB_API_KEY=<your Honeycomb API key>
-```
-
-That's it — `./run`, `./deploy`, etc. all pick it up automatically.
+Traces and logs go to an OTel collector (`workshop.jessitron.honeydemo.io`),
+which forwards them on to Honeycomb — no API key or one-time secret setup
+needed on the Modal side.
 
 Caveats:
 

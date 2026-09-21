@@ -18,8 +18,8 @@ import modal
 
 MODEL_NAME = "mistralai/Mistral-Small-3.2-24B-Instruct-2506"
 SERVED_MODEL_NAME = "better"
-HONEYCOMB_TRACES_ENDPOINT = "https://api.honeycomb.io/v1/traces"
-HONEYCOMB_LOGS_ENDPOINT = "https://api.honeycomb.io/v1/logs"
+COLLECTOR_TRACES_ENDPOINT = "https://workshop.jessitron.honeydemo.io/v1/traces"
+COLLECTOR_LOGS_ENDPOINT = "https://workshop.jessitron.honeydemo.io/v1/logs"
 OTEL_SERVICE_NAME = "llms-from-the-top-api"
 
 vllm_image = (
@@ -70,8 +70,6 @@ app = modal.App("llms-from-the-top-better")
 hf_cache_vol = modal.Volume.from_name("llms-from-the-top-hf-cache", create_if_missing=True)
 vllm_cache_vol = modal.Volume.from_name("llms-from-the-top-vllm-cache", create_if_missing=True)
 
-honeycomb_secret = modal.Secret.from_name("honeycomb", required_keys=["HONEYCOMB_API_KEY"])
-
 
 @app.function(
     image=vllm_image,
@@ -85,7 +83,6 @@ honeycomb_secret = modal.Secret.from_name("honeycomb", required_keys=["HONEYCOMB
         "/root/.cache/huggingface": hf_cache_vol,
         "/root/.cache/vllm": vllm_cache_vol,
     },
-    secrets=[honeycomb_secret],
 )
 @modal.concurrent(max_inputs=32)
 @modal.web_server(port=8000, startup_timeout=10 * 60)
@@ -118,7 +115,7 @@ def serve_better():
         # instead of parsing it into the OpenAI-style `tool_calls` field.
         "--enable-auto-tool-choice",
         "--tool-call-parser", "mistral",
-        "--otlp-traces-endpoint", HONEYCOMB_TRACES_ENDPOINT,
+        "--otlp-traces-endpoint", COLLECTOR_TRACES_ENDPOINT,
         # Adds the root HTTP span (client info, prompt/completion content)
         # that vLLM's own --otlp-traces-endpoint tracer doesn't record.
         "--middleware", "otel_middleware.trace_http_requests",
@@ -131,17 +128,16 @@ def serve_better():
         # (our alias), never the real HF model id.
         "GEN_AI_RESPONSE_MODEL": MODEL_NAME,
         "OTEL_SERVICE_NAME": OTEL_SERVICE_NAME,
-        # vLLM defaults the OTLP protocol to grpc; Honeycomb's traces
+        # vLLM defaults the OTLP protocol to grpc; the collector's traces
         # endpoint above is the http/protobuf one.
         "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": "http/protobuf",
-        "OTEL_EXPORTER_OTLP_HEADERS": f"x-honeycomb-team={os.environ['HONEYCOMB_API_KEY']}",
         # otel_middleware.py builds its own exporter from this directly,
         # since it runs a separate TracerProvider from vLLM's own tracer.
-        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": HONEYCOMB_TRACES_ENDPOINT,
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": COLLECTOR_TRACES_ENDPOINT,
         # Makes vLLM's own log records (it logs via stdlib `logging`, not
         # print) flow through otel_middleware.build_otel_log_handler, which
         # reads this endpoint directly.
         "VLLM_LOGGING_CONFIG_PATH": "/root/vllm_logging_config.json",
-        "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": HONEYCOMB_LOGS_ENDPOINT,
+        "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": COLLECTOR_LOGS_ENDPOINT,
     }
     subprocess.Popen(" ".join(cmd), shell=True, env=env)

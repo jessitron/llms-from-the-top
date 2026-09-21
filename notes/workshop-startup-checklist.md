@@ -57,8 +57,10 @@ above the 24B model's ~48GB of bf16 weights once vLLM's KV cache is added.)
 ## One-time setup (already done, unless this is a new Modal account)
 
 - `modal` CLI authenticated (`setup-modal-account.sh` if starting fresh)
-- `modal secret create honeycomb HONEYCOMB_API_KEY=<key>` — shared by all
-  three functions across both apps
+
+Traces/logs go straight to the OTel collector at
+`workshop.jessitron.honeydemo.io` — no Honeycomb secret needed on the Modal
+side anymore.
 
 ## Before leaving each session
 
