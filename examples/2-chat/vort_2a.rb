@@ -5,7 +5,7 @@ require "json"
 require "securerandom"
 
 # a random uuid
-conversation_id = SecureRandom.uuid
+CONVERSATION_ID = SecureRandom.uuid
 
 loop do
   print "vort> "
@@ -16,7 +16,7 @@ loop do
   response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/completions"), request.to_json, {
     "content-type": "application/json",
     "x-api-key": "exploreddd",
-    "x-conversation-id": conversation_id,
+    "x-conversation-id": CONVERSATION_ID,
   }
   case response
   in Net::HTTPSuccess
