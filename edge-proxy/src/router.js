@@ -9,10 +9,61 @@ import { trace } from "@opentelemetry/api";
 const DEFAULT_MAX_TOKENS = 200;
 
 // Honeycomb's Gen AI message format (see genai-message-format.md): each
-// message becomes { role, parts: [{ type: "text", content }] }, JSON-encoded
-// as a single string per gen_ai.input.messages / gen_ai.output.messages
-// attribute. Note the part field is `content`, not `text`.
+// message becomes { role, parts: [...] }, JSON-encoded as a single string
+// per gen_ai.input.messages / gen_ai.output.messages attribute. Note the
+// text part field is `content`, not `text`.
+//
+// This is called with messages in either of two shapes, depending on the
+// caller: OpenAI-shaped (role/content string, plus optional tool_calls, or
+// role "tool" with tool_call_id) from routeToBackend, and Anthropic-shaped
+// (content is a string OR an array of text/tool_use/tool_result blocks)
+// from routeToAnthropic. A message whose content is an array falls outside
+// the plain-string case this used to assume, and was silently turned into
+// an empty text part instead of a tool_call/tool_call_response part.
 function genAiMessagePart(message) {
+  if (message.role === "tool") {
+    return {
+      role: "tool",
+      parts: [
+        {
+          type: "tool_call_response",
+          id: message.tool_call_id,
+          response: typeof message.content === "string" ? message.content : JSON.stringify(message.content),
+        },
+      ],
+    };
+  }
+
+  if (message.tool_calls !== undefined) {
+    const parts = [];
+    if (typeof message.content === "string" && message.content !== "") {
+      parts.push({ type: "text", content: message.content });
+    }
+    for (const call of message.tool_calls) {
+      parts.push({ type: "tool_call", id: call.id, name: call.function.name, arguments: call.function.arguments });
+    }
+    return { role: message.role, parts };
+  }
+
+  if (Array.isArray(message.content)) {
+    return {
+      role: message.role,
+      parts: message.content.map((block) => {
+        if (block.type === "tool_use") {
+          return { type: "tool_call", id: block.id, name: block.name, arguments: JSON.stringify(block.input) };
+        }
+        if (block.type === "tool_result") {
+          return {
+            type: "tool_call_response",
+            id: block.tool_use_id,
+            response: typeof block.content === "string" ? block.content : JSON.stringify(block.content),
+          };
+        }
+        return { type: "text", content: block.text ?? "" };
+      }),
+    };
+  }
+
   return {
     role: message.role,
     parts: [{ type: "text", content: typeof message.content === "string" ? message.content : "" }],
@@ -150,6 +201,10 @@ export async function routeToAnthropic(body, incoming, env) {
   span?.setAttribute("gen_ai.operation.name", "chat");
   span?.setAttribute("gen_ai.provider.name", "anthropic");
   span?.setAttribute("gen_ai.request.model", ANTHROPIC_MODEL);
+  // Raw copy of what we're about to translate, so a translation bug (like the
+  // one that motivated this) shows up as a visible mismatch in Honeycomb
+  // instead of just quietly blank gen_ai.input.messages parts.
+  span?.setAttribute("app.raw_input_messages", JSON.stringify(messages));
   span?.setAttribute("gen_ai.input.messages", genAiInputMessages(messages));
   if (system !== undefined) {
     span?.setAttribute("gen_ai.system_instructions", JSON.stringify([{ type: "text", content: system }]));
@@ -186,9 +241,13 @@ export async function routeToAnthropic(body, incoming, env) {
       function: { name: block.name, arguments: JSON.stringify(block.input) },
     })) ?? [];
   const finishReason = toOpenAiFinishReason(anthropicResponse.stop_reason);
+  span?.setAttribute("app.raw_output_message", JSON.stringify(anthropicResponse.content ?? []));
   span?.setAttribute(
     "gen_ai.output.messages",
-    genAiOutputMessages({ role: "assistant", content }, finishReason),
+    genAiOutputMessages(
+      { role: "assistant", content, ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {}) },
+      finishReason,
+    ),
   );
   return Response.json({
     id: anthropicResponse.id,
@@ -270,6 +329,7 @@ export async function routeToBackend(request, env) {
   if (isChat) {
     span?.setAttribute("gen_ai.operation.name", "chat");
     span?.setAttribute("gen_ai.request.model", body.model ?? "chat");
+    span?.setAttribute("app.raw_input_messages", JSON.stringify(body.messages));
     span?.setAttribute("gen_ai.input.messages", genAiInputMessages(body.messages));
   }
 
@@ -314,6 +374,7 @@ export async function routeToBackend(request, env) {
   const responseBody = await response.json();
   const choice = responseBody.choices?.[0];
   if (choice?.message) {
+    span?.setAttribute("app.raw_output_message", JSON.stringify(choice.message));
     span?.setAttribute("gen_ai.output.messages", genAiOutputMessages(choice.message, choice.finish_reason));
   }
   if (responseBody.model) span?.setAttribute("gen_ai.response.model", responseBody.model);

@@ -60,6 +60,15 @@ Each attribute is a **JSON-encoded string** containing an **array of message obj
 - Keep each attribute's JSON under a reasonable size — Honeycomb truncates content that's too
   large; truncate/redact on your end if messages can be large or sensitive.
 
+### Raw copies for debugging translation
+
+`src/router.js` also sets `app.raw_input_messages` / `app.raw_output_message`
+alongside the `gen_ai.*` attributes — the untranslated messages/message
+object, JSON-encoded, before conversion to the parts format above. If a
+future shape isn't handled and collapses into a blank text part, these raw
+attributes make that visible directly in Honeycomb, next to the translated
+version.
+
 ### Minimal example (no tool calls)
 
 ```json

@@ -191,6 +191,78 @@ describe("routeToBackend", () => {
     expect(capturedAttributes["gen_ai.usage.input_tokens"]).toBe(3);
     expect(capturedAttributes["gen_ai.usage.output_tokens"]).toBe(4);
   });
+
+  it("captures raw and translated gen_ai messages for an OpenAI-shaped tool call/result exchange", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        model: "chat",
+        choices: [{ message: { role: "assistant", content: "It's 72 and sunny." }, finish_reason: "stop" }],
+      }),
+    );
+    const messages = [
+      { role: "user", content: "what's the weather in Chicago?" },
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          { id: "call_1", type: "function", function: { name: "get_weather", arguments: '{"city":"Chicago"}' } },
+        ],
+      },
+      { role: "tool", tool_call_id: "call_1", content: "72 and sunny" },
+    ];
+    await routeToBackend(request("/v1/chat/completions", { body: { messages } }), env);
+
+    expect(JSON.parse(capturedAttributes["app.raw_input_messages"])).toEqual(messages);
+    expect(JSON.parse(capturedAttributes["gen_ai.input.messages"])).toEqual([
+      { role: "user", parts: [{ type: "text", content: "what's the weather in Chicago?" }] },
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call_1", name: "get_weather", arguments: '{"city":"Chicago"}' }],
+      },
+      { role: "tool", parts: [{ type: "tool_call_response", id: "call_1", response: "72 and sunny" }] },
+    ]);
+  });
+
+  it("captures raw and translated gen_ai output messages when the response includes tool_calls", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        model: "chat",
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: [
+                { id: "call_1", type: "function", function: { name: "get_weather", arguments: '{"city":"Chicago"}' } },
+              ],
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
+      }),
+    );
+    await routeToBackend(
+      request("/v1/chat/completions", {
+        body: { messages: [{ role: "user", content: "what's the weather in Chicago?" }] },
+      }),
+      env,
+    );
+
+    expect(JSON.parse(capturedAttributes["app.raw_output_message"])).toEqual({
+      role: "assistant",
+      content: null,
+      tool_calls: [
+        { id: "call_1", type: "function", function: { name: "get_weather", arguments: '{"city":"Chicago"}' } },
+      ],
+    });
+    expect(JSON.parse(capturedAttributes["gen_ai.output.messages"])).toEqual([
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call_1", name: "get_weather", arguments: '{"city":"Chicago"}' }],
+        finish_reason: "tool_calls",
+      },
+    ]);
+  });
 });
 
 describe("routeToAnthropic", () => {
@@ -372,6 +444,78 @@ describe("routeToAnthropic", () => {
         role: "assistant",
         parts: [{ type: "text", content: "hello there" }],
         finish_reason: "end_turn",
+      },
+    ]);
+  });
+
+  it("translates a tool_use/tool_result exchange into gen_ai parts instead of blank text, and records the raw form", async () => {
+    const body = {
+      messages: [
+        { role: "user", content: "what's the weather in Chicago?" },
+        {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            { id: "call_1", type: "function", function: { name: "get_weather", arguments: '{"city":"Chicago"}' } },
+          ],
+        },
+        { role: "tool", tool_call_id: "call_1", content: "72 and sunny" },
+      ],
+    };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    await routeToAnthropic(body, incoming, env);
+
+    const rawInput = JSON.parse(capturedAttributes["app.raw_input_messages"]);
+    expect(rawInput).toEqual([
+      { role: "user", content: "what's the weather in Chicago?" },
+      {
+        role: "assistant",
+        content: [{ type: "tool_use", id: "call_1", name: "get_weather", input: { city: "Chicago" } }],
+      },
+      {
+        role: "user",
+        content: [{ type: "tool_result", tool_use_id: "call_1", content: "72 and sunny" }],
+      },
+    ]);
+    expect(JSON.parse(capturedAttributes["gen_ai.input.messages"])).toEqual([
+      { role: "user", parts: [{ type: "text", content: "what's the weather in Chicago?" }] },
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call_1", name: "get_weather", arguments: '{"city":"Chicago"}' }],
+      },
+      { role: "user", parts: [{ type: "tool_call_response", id: "call_1", response: "72 and sunny" }] },
+    ]);
+  });
+
+  it("includes tool_use blocks in gen_ai.output.messages instead of dropping them, and records the raw form", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        id: "msg_456",
+        model: "claude-haiku-4-5-20251001",
+        content: [
+          { type: "text", text: "Let me check that." },
+          { type: "tool_use", id: "toolu_1", name: "get_weather", input: { city: "Chicago" } },
+        ],
+        stop_reason: "tool_use",
+        usage: { input_tokens: 10, output_tokens: 5 },
+      }),
+    );
+    const body = { messages: [{ role: "user", content: "what's the weather in Chicago?" }] };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    await routeToAnthropic(body, incoming, env);
+
+    expect(JSON.parse(capturedAttributes["app.raw_output_message"])).toEqual([
+      { type: "text", text: "Let me check that." },
+      { type: "tool_use", id: "toolu_1", name: "get_weather", input: { city: "Chicago" } },
+    ]);
+    expect(JSON.parse(capturedAttributes["gen_ai.output.messages"])).toEqual([
+      {
+        role: "assistant",
+        parts: [
+          { type: "text", content: "Let me check that." },
+          { type: "tool_call", id: "toolu_1", name: "get_weather", arguments: '{"city":"Chicago"}' },
+        ],
+        finish_reason: "tool_calls",
       },
     ]);
   });
