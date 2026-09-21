@@ -8,7 +8,15 @@ The API composed here is OpenAI-compatible, since that's a standard.
 
 It starts with /v1/completions, so we can see how a base model responds.
 
-and then we can move to /v1/chat/completions later, maybe. Maybe we'll keep using /completions and put the template on the agent side, for clarity of what's happening!
+and then we can move to /v1/chat/completions.
+
+## Models
+
+"base" is https://huggingface.co/mistralai/Mistral-7B-v0.1
+
+"chat" is an instruction-tuned version of that one: https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1
+
+"better" uses https://huggingface.co/mistralai/Mistral-Small-3.2-24B-Instruct-2506
 
 ## Deployment
 
