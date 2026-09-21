@@ -10,7 +10,7 @@ loop do
   break if input in "exit" | "quit"
   messages << {role: "user", content: input  }
 
-  request = { model: "chat", messages: messages }
+  request = { model: "haiku", messages: messages }
   response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/chat/completions"), request.to_json, {
     "content-type": "application/json",
     "x-api-key": "exploreddd"
