@@ -113,6 +113,11 @@ def serve_better():
         # is run through a shell below, which would otherwise eat the
         # double quotes this JSON needs.
         "--limit-mm-per-prompt", "'{\"image\":0}'",
+        # Mistral emits a [TOOL_CALLS]name{...} token for function calls;
+        # without these two flags vLLM leaves that raw text in `content`
+        # instead of parsing it into the OpenAI-style `tool_calls` field.
+        "--enable-auto-tool-choice",
+        "--tool-call-parser", "mistral",
         "--otlp-traces-endpoint", HONEYCOMB_TRACES_ENDPOINT,
         # Adds the root HTTP span (client info, prompt/completion content)
         # that vLLM's own --otlp-traces-endpoint tracer doesn't record.
