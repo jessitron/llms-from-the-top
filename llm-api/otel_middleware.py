@@ -118,6 +118,8 @@ def _record_request_content(span, payload: dict) -> None:
 
 
 def _record_response_content(span, payload: dict) -> None:
+    if "model" in payload:
+        span.set_attribute("gen_ai.response.model", payload["model"])
     for i, choice in enumerate(payload.get("choices", [])):
         text = choice.get("text")
         if text is None and "message" in choice:
