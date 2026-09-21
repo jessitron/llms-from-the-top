@@ -158,11 +158,45 @@ async function routeToAnthropic(body, incoming, env) {
   });
 }
 
+const VALID_MODELS = ["base", "chat", "better", "haiku"];
+
 async function routeToBackend(request, env) {
   const incoming = new URL(request.url);
 
   let body;
-  if (request.method === "POST") body = await request.json();
+  if (request.method === "POST") {
+    const raw = await request.text();
+    try {
+      body = raw === "" ? undefined : JSON.parse(raw);
+    } catch (err) {
+      return new Response(
+        `Invalid JSON in request body: ${err.message}\nGot: ${raw}`,
+        { status: 400 },
+      );
+    }
+  }
+
+  if (body?.model !== undefined && !VALID_MODELS.includes(body.model)) {
+    return new Response(
+      `Unknown model "${body.model}". Valid values are: ${VALID_MODELS.join(", ")} (or omit "model" for the default chat model).`,
+      { status: 400 },
+    );
+  }
+
+  if (incoming.pathname === "/v1/chat/completions") {
+    if (body?.messages === undefined) {
+      return new Response(
+        `/v1/chat/completions requires a "messages" field in the request body.`,
+        { status: 400 },
+      );
+    }
+    if (!Array.isArray(body.messages)) {
+      return new Response(
+        `"messages" must be an array of {role, content} objects, got: ${JSON.stringify(body.messages)}`,
+        { status: 400 },
+      );
+    }
+  }
 
   if (body?.model === "haiku") return routeToAnthropic(body, incoming, env);
 
@@ -195,8 +229,12 @@ async function routeToBackend(request, env) {
   return fetchUpstream(upstreamRequest);
 }
 
+const WORKSHOP_REPO = "https://github.com/jessitron/llms-from-the-top";
+
 const handler = {
   async fetch(request, env) {
+    if (request.method === "GET") return Response.redirect(WORKSHOP_REPO, 302);
+
     const authError = checkAuth(request, env);
     if (authError) return authError;
 
