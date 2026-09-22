@@ -9,9 +9,7 @@ MAX_FILE_READ = 2000
 
 SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. You read the documentation. You verify the results of your changes with tests. #{File.exist?(AGENTS_INSTRUCTION_FILE) ? File.read(AGENTS_INSTRUCTION_FILE) : ''}"
 
-SKILLS = [{ skill: 'changelog', description: 'Load this when creating a changelog entry', file: 'skills/changelog.md' },
-          { skill: 'commit-message', description: 'Load this when before you write a commit message',
-            file: 'skills/commit-message.md' }]
+SKILLS = Dir['skills/*.md'].map { |file| { skill: File.basename(file, '.md'), description: File.read(file)[/Trigger: (.*)/, 1], file: file } }
 SKILL_TOOL_DESCRIPTION = 'Available skills: ' + SKILLS.map { |s| "#{s[:skill]} - #{s[:description]}" }.join(', ')
 
 TOOLS = [
