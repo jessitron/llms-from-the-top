@@ -11,25 +11,45 @@ than one).
 `llms-from-the-top-edge-proxy`, `llms-from-the-top-eval-harness`,
 `llms-from-the-top-evals`.
 
-## Via the Honeycomb UI
+## The easy way: a query template URL
 
-1. Go to the `llms-from-the-top` environment (not a specific dataset —
-   pick **All Datasets** at the dataset selector, top left).
-2. New query: filter `gen_ai.conversation.id` = `<paste the id>`.
-3. Add columns you want as a table (Visualize: none, or add a COUNT if
-   you just want to confirm it matches something), or switch to "Trace"
-   view on one of the resulting traces to see the whole conversation's
-   spans in context.
-4. Save this as a Board/query template once, then just edit the filter
-   value each time — Honeycomb keeps the rest of the shape.
+Honeycomb encodes the whole query spec as JSON in the `query` URL
+parameter. A URL with no `/datasets/<slug>/` segment — just
+`/environments/<env>?query=...` — runs environment-wide, across every
+dataset. Paste this, replace `REPLACE_WITH_CONVERSATION_ID` with the
+real id (plain find-and-replace works — a UUID has no characters that
+need re-encoding), and open it:
 
-Bookmark-able version, environment-wide (no dataset in the path):
-`https://ui.honeycomb.io/modernity/environments/llms-from-the-top/result/<query_run_id>`
-— every `run_query` call below returns a fresh one of these in
-`query_url`; there's no static "fill in the id" URL because Honeycomb
-mints a new query_run_id per run.
+```
+https://ui.honeycomb.io/modernity/environments/llms-from-the-top?query=%7B%22time_range%22%3A604800%2C%22granularity%22%3A0%2C%22breakdowns%22%3A%5B%5D%2C%22calculations%22%3A%5B%7B%22op%22%3A%22COUNT%22%7D%5D%2C%22filters%22%3A%5B%7B%22column%22%3A%22gen_ai.conversation.id%22%2C%22op%22%3A%22%3D%22%2C%22value%22%3A%22REPLACE_WITH_CONVERSATION_ID%22%7D%5D%2C%22filter_combination%22%3A%22AND%22%2C%22orders%22%3A%5B%7B%22op%22%3A%22COUNT%22%2C%22order%22%3A%22descending%22%7D%5D%2C%22limit%22%3A1000%7D
+```
+
+That decodes to:
+
+```json
+{
+  "time_range": 604800,
+  "granularity": 0,
+  "breakdowns": [],
+  "calculations": [{"op": "COUNT"}],
+  "filters": [
+    {"column": "gen_ai.conversation.id", "op": "=", "value": "REPLACE_WITH_CONVERSATION_ID"}
+  ],
+  "filter_combination": "AND",
+  "orders": [{"op": "COUNT", "order": "descending"}],
+  "limit": 1000
+}
+```
+
+`time_range` is in seconds (604800 = 7 days) — widen it if the
+conversation is older. Once it's open, add breakdowns/columns or switch
+to the Trace view on a result to see the spans themselves; the filter is
+the part that matters and it's already scoped to all datasets.
 
 ## Via the Honeycomb MCP (`honeycomb-modernity`)
+
+Same idea, for when you'd rather have an agent run it and read back the
+raw rows instead of opening a browser:
 
 ```json
 {
@@ -51,5 +71,6 @@ Swap `raw_row_columns` for whatever you're actually looking at (e.g. add
 what makes it search every dataset in the environment instead of one.
 
 Verified 2026-09-22 against a real conversation id
-(`a6c27606-dedb-4f1e-9006-fff09bc5d26e`) — returned 46 spans, all from
+(`a6c27606-dedb-4f1e-9006-fff09bc5d26e`) — both the URL template and the
+MCP form returned the same 46 spans, all from
 `llms-from-the-top-edge-proxy`, correctly scoped environment-wide.
