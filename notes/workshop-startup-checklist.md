@@ -2,6 +2,10 @@
 
 [] push this repo
 
+[] check Anthropic budget
+
+[] check OpenAI budget
+
 Two independent Modal apps, deployed and stopped separately.
 
 ## 1. base + chat pair (`llm-api/app.py`)

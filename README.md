@@ -29,10 +29,25 @@ Write your own code to do this as we go along! Or run mine, as provided for each
 ## Outline
 
 1. What is an LLM? try out a completion machine with an API call.
+2. Make a loop to create a chatbot.
+3. Add a system prompt to give it character.
+4. Implement tools to make it an agent.
+5. Give skills to make it smarter.
+
+## Evals
+
+How do we know it works? Today, for play, it's enough to try it out and see. There are also some programs in this repo that exercise its agent implementations. They're only deterministic, not incorporating LLM-as-judge, but at coding tasks you can measure success. The evals make it faster to compare implementations as we tweak our bots.
+
+## Telemetry
+
+THe API provided for this workshop (llms-from-the-top.jessitron.com) sends telemetry to Honeycomb. We are gonna look at that during the workshop. You can look at some of it, too, as it sends to a Honeycomb sandbox environment. Only part of Honeycomb is available there, but check out
+
+[What people are asking and the responses they get](https://play.honeycomb.io/sandbox/environments/workshop/datasets/llms-from-the-top-edge-proxy/result/diw7mXMuTzk)
+
 
 ## This Repository
 
-This repository holds (will hold):
+This repository holds:
 
 [ ] Example code
 [ ] The backend of the LLM API you'll use during the workshop
