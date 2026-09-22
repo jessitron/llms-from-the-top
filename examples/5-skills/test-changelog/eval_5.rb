@@ -14,9 +14,10 @@ dir = __dir__
 vort_dir = File.dirname(dir)
 max_nudges = 5
 
+base_checks = [:flag_works, :changelog_updated, :changelog_format_ok, :correct_emoji, :migrate_line]
 runs = [
-  { program: "vort_5a.rb", workspace_dir: "#{dir}/workspace-5a" },
-  { program: "vort_5b.rb", workspace_dir: "#{dir}/workspace-5b" },
+  { program: "vort_5a.rb", workspace_dir: "#{dir}/workspace-5a", checks: base_checks },
+  { program: "vort_5b.rb", workspace_dir: "#{dir}/workspace-5b", checks: base_checks + [:loaded_skill] },
 ]
 
 test_cases = [
@@ -45,8 +46,10 @@ end
 #
 # Points awarded piecemeal so a plausible-but-wrong guess (e.g. inventing its
 # own emoji) still scores partial credit instead of a flat FAIL.
-POINTS = { flag_works: 5, changelog_updated: 1, changelog_format_ok: 1, correct_emoji: 1, migrate_line: 2 }
-MAX_SCORE = POINTS.values.sum
+# loaded_skill only applies to vort_5b, which has a changelog skill to load;
+# vort_5a has no skill and isn't scored on it.
+POINTS = { flag_works: 5, changelog_updated: 1, changelog_format_ok: 1, correct_emoji: 1, migrate_line: 2, loaded_skill: 2 }
+COMMIT_PENALTY = 2
 
 def score_changelog(changelog, original_top_line)
   lines = changelog.lines.map(&:chomp)
@@ -63,6 +66,8 @@ end
 runs.each do |run|
 program = run[:program]
 workspace_dir = run[:workspace_dir]
+checks = run[:checks]
+max_score = checks.sum { |k| POINTS[k] }
 original_top_line = File.read("#{workspace_dir}/CHANGELOG.md").lines.map(&:chomp).find { |l| l.start_with?("## ") }
 
 test_cases.each do |tc|
@@ -115,22 +120,32 @@ test_cases.each do |tc|
 
   changelog = File.read("#{tmp_dir}/CHANGELOG.md")
   scores = score_changelog(changelog, original_top_line).merge(flag_works: flag_works)
-  score = scores.sum { |k, v| v ? POINTS[k] : 0 }
+  scores[:loaded_skill] = transcript.include?('load_skill({"skill" => "changelog"})') if checks.include?(:loaded_skill)
+
+  # Neither the commit nor the commit-message skill was asked for — vort should
+  # touch only greeter.rb and CHANGELOG.md here, so either one costs points.
+  attempted_commit = !!(transcript =~ /run_command\(\{"command" => "[^"]*\bcommit\b/i) ||
+    transcript.include?('load_skill({"skill" => "commit-message"})')
+
+  score = checks.sum { |k| scores[k] ? POINTS[k] : 0 }
+  score -= COMMIT_PENALTY if attempted_commit
+  score = 0 if score.negative?
 
   diff = Open3.capture2("diff", "-u", "#{workspace_dir}/CHANGELOG.md", "#{tmp_dir}/CHANGELOG.md").first
 
-  grade = score == MAX_SCORE ? "PASS" : "FAIL"
+  grade = score == max_score ? "PASS" : "FAIL"
   scored_at = Time.now
-  color = score == MAX_SCORE ? "\e[32m" : score.zero? ? "\e[31m" : "\e[33m"
+  color = score == max_score ? "\e[32m" : score.zero? ? "\e[31m" : "\e[33m"
   puts transcript
-  puts "#{color}#{score}/#{MAX_SCORE}. finish_reason=#{eval_finish_reason}, turns=#{turns}, tool_calls=#{tool_call_count}, #{scores}\e[0m"
+  puts "#{color}#{score}/#{max_score}. finish_reason=#{eval_finish_reason}, turns=#{turns}, tool_calls=#{tool_call_count}, #{scores}, attempted_commit=#{attempted_commit}\e[0m"
 
   FileUtils.remove_entry(tmp_dir)
 
-  evaluations = scores.map { |name, passed| [name.to_s, passed ? 1 : 0, passed ? "yes" : "no", nil] }
-  evaluations << ["overall", score.to_f / MAX_SCORE, grade, diff]
+  evaluations = checks.map { |name| [name.to_s, scores[name] ? 1 : 0, scores[name] ? "yes" : "no", nil] }
+  evaluations << ["attempted_commit", attempted_commit ? 1 : 0, attempted_commit ? "yes" : "no", nil]
+  evaluations << ["overall", score.to_f / max_score, grade, diff]
   post_eval_span identity, trace_id, span_id, span_start, span_end,
     { eval_finish_reason: eval_finish_reason, turns: turns, tool_call_count: tool_call_count,
-      grade: grade, score: score, max_score: MAX_SCORE }, scored_at, evaluations
+      grade: grade, score: score, max_score: max_score }, scored_at, evaluations
 end
 end

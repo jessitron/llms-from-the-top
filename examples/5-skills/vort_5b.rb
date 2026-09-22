@@ -45,7 +45,7 @@ loop do
     response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/chat/completions"), request.to_json, {
       "content-type": "application/json",
       "x-api-key": "exploreddd",
-      "x-agent-name": "vort_5a",
+      "x-agent-name": "vort_5b",
       "x-conversation-id": CONVERSATION_ID
     }
     case response
