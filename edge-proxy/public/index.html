@@ -21,11 +21,66 @@
 
   <h2>Calling the API</h2>
   <p>Every request needs an <code>x-api-key</code> header — ask Jess for the value.</p>
+
+  <h2><code>/v1/completions</code></h2>
+  <p>Raw text completion. Given a prompt, the model continues it. No chat structure, no
+  instruction-following unless the model happens to have been trained for it.</p>
+
+  <p><strong>URI:</strong> <code>https://llms-from-the-top.jessitron.com/v1/completions</code></p>
+  <p><strong>Method:</strong> POST</p>
+
+  <p><strong>Headers:</strong></p>
+  <ul>
+    <li><code>content-type: application/json</code> — required</li>
+    <li><code>x-api-key: &lt;your key&gt;</code> — required</li>
+    <li><code>x-conversation-id: &lt;a unique ID for this agent run, like a UUID&gt;</code> — optional</li>
+    <li><code>x-agent-name: &lt;your agent's name&gt;</code> — optional</li>
+  </ul>
+
+  <p><strong>Input format</strong> (JSON body):</p>
+  <pre>{ "model": "base", "prompt": "Once upon a time, a giant" }</pre>
+  <ul>
+    <li><code>model</code> — <code>"base"</code> or <code>"chat"</code>. Defaults to <code>"chat"</code> if omitted.</li>
+    <li><code>prompt</code> — the text to continue.</li>
+    <li><code>max_tokens</code> — optional, defaults to 100.</li>
+  </ul>
+
+  <p><strong>Output format</strong> (JSON body, vLLM's OpenAI-compatible completions response):</p>
+  <pre>{
+  "choices": [{ "text": " ...continuation...", "finish_reason": "stop" }]
+}</pre>
+  <ul>
+    <li><code>choices[0].text</code> — the completion.</li>
+    <li><code>choices[0].finish_reason</code> — why it stopped, e.g. <code>"stop"</code> or <code>"length"</code>.</li>
+  </ul>
+
+  <pre>curl https://llms-from-the-top.jessitron.com/v1/completions \
+  -H "x-api-key: &lt;your key&gt;" -H "content-type: application/json" \
+  -d '{"model": "base", "prompt": "Once upon a time, a giant"}'</pre>
+
+  <h2><code>/v1/chat/completions</code></h2>
+  <p>The chat API. Looks like OpenAI's chat completions API (my endpoint doesn't support all of
+  it, and support varies by model).</p>
+
+  <p><strong>URI:</strong> <code>https://llms-from-the-top.jessitron.com/v1/chat/completions</code></p>
+  <p><strong>Method:</strong> POST</p>
+
+  <p>Same headers as above (<code>content-type</code> and <code>x-api-key</code> required;
+  <code>x-conversation-id</code> and <code>x-agent-name</code> optional).</p>
+
   <pre>curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
   -H "x-api-key: &lt;your key&gt;" -H "content-type: application/json" \
   -d '{"messages": [{"role": "user", "content": "hi"}]}'</pre>
 
   <p>Valid <code>model</code> values: <code>base</code>, <code>chat</code>, <code>better</code>,
   <code>haiku</code>, <code>luna</code>, <code>nano</code> (omit for the default chat model).</p>
+
+  <p>The request/response shape grows as the workshop progresses — messages, system prompts, tool
+  definitions and tool calls. See these, in order, for the details:</p>
+  <ul>
+    <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/2-chat/README.md"><code>examples/2-chat/README.md</code></a> — messages format, request/response shape</li>
+    <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/3-system-prompt/README.md"><code>examples/3-system-prompt/README.md</code></a> — adding a system message</li>
+    <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/4-tools/README.md"><code>examples/4-tools/README.md</code></a> — tool definitions, tool calls, tool results</li>
+  </ul>
 </body>
 </html>
