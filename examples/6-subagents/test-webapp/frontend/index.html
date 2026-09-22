@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head><title>Greeter</title></head>
+<body>
+  <h1 id="greeting">loading...</h1>
+  <script>
+    fetch("http://localhost:4567/api/greeting")
+      .then(res => res.json())
+      .then(data => { document.getElementById("greeting").textContent = data.message })
+  </script>
+</body>
+</html>
