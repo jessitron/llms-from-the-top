@@ -1,6 +1,11 @@
 /**
  * Front door for llms-from-the-top.jessitron.com.
  *
+ * GET requests for static paths (/, /index.html, etc.) are served straight
+ * from `public/` via Workers static assets (see the `[assets]` binding in
+ * wrangler.toml) and never reach this fetch handler at all. Anything that
+ * doesn't match a file in `public/` falls through to here.
+ *
  * Routes to one of three Modal-hosted vLLM backends (base, chat, or better
  * model) by the request body's `model` field, defaulting to the chat model.
  * `model: "haiku"` and `model: "luna"` instead call the real Anthropic and
@@ -55,8 +60,6 @@ class BaggageSpanProcessor {
   }
 }
 
-const WORKSHOP_REPO = "https://github.com/jessitron/llms-from-the-top";
-
 // @microlabs/otel-cf-workers names the root span "fetchHandler <METHOD>" by
 // default (see its fetchInstrumentation.getInitialSpanInfo). Renaming it
 // here to "<endpoint> <METHOD>" (e.g. "chat POST") makes the trace list
@@ -68,8 +71,6 @@ function endpointName(pathname) {
 
 const handler = {
   async fetch(request, env) {
-    if (request.method === "GET") return Response.redirect(WORKSHOP_REPO, 302);
-
     const authError = checkAuth(request, env);
     if (authError) return authError;
 

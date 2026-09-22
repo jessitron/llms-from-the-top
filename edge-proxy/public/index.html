@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>llms-from-the-top</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    code, pre { background: #f2f2f2; padding: 0.15em 0.4em; border-radius: 4px; }
+    pre { padding: 0.75em; overflow-x: auto; }
+    h1 { font-size: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>llms-from-the-top</h1>
+  <p>
+    This is the API host for the
+    <a href="https://github.com/jessitron/llms-from-the-top">llms-from-the-top</a>
+    workshop. Clone the repo and follow along in <code>examples/</code>.
+  </p>
+
+  <h2>Calling the API</h2>
+  <p>Every request needs an <code>x-api-key</code> header — ask Jess for the value.</p>
+  <pre>curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
+  -H "x-api-key: &lt;your key&gt;" -H "content-type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "hi"}]}'</pre>
+
+  <p>Valid <code>model</code> values: <code>base</code>, <code>chat</code>, <code>better</code>,
+  <code>haiku</code>, <code>luna</code>, <code>nano</code> (omit for the default chat model).</p>
+</body>
+</html>

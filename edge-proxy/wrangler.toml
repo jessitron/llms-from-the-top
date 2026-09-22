@@ -3,6 +3,9 @@ main = "src/index.js"
 compatibility_date = "2026-09-14"
 compatibility_flags = ["nodejs_compat"]
 
+[assets]
+directory = "./public"
+
 [vars]
 BASE_BACKEND_URL = "https://jessitron--llms-from-the-top-base-serve.modal.run"
 CHAT_BACKEND_URL = "https://jessitron--llms-from-the-top-base-serve-chat.modal.run"

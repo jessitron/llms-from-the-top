@@ -10,7 +10,13 @@ domain working without that, and it's also the natural place to add other
 request-level logic later — `x-api-key` auth, etc. (see the yaks nested
 under "custom domain" via `yx list`).
 
-It forwards every request to one of three Modal backend URLs in
+GET requests are served as static files straight off Cloudflare's edge from
+`public/` (via the `[assets]` binding in `wrangler.toml`) — this Worker's
+`fetch` handler never even runs for those. `public/index.html` has
+workshop instructions and any client-JS-only utilities; add more files
+there as needed, no deploy-time build step.
+
+For everything else, it forwards the request to one of three Modal backend URLs in
 `wrangler.toml` — `BASE_BACKEND_URL` if the request body's `"model"` is
 `"base"`, `BETTER_BACKEND_URL` if it's `"better"`, `CHAT_BACKEND_URL`
 otherwise — rewriting the Host header so Modal's edge routes it correctly.
