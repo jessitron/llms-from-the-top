@@ -2,7 +2,7 @@
 require "net/http"
 require "json"
 
-dir = __dir__
+dir = "#{__dir__}/workspace"
 pid = spawn("ruby #{dir}/backend/server.rb", out: File::NULL, err: File::NULL)
 
 begin
@@ -18,12 +18,13 @@ begin
 
   raise "backend never came up" unless response
   body = JSON.parse(response.body)
-  raise "backend response missing 'message': #{body}" unless body["message"]
+  raise "backend returned an empty object: #{body}" if body.empty?
+  field = body.keys.first
 
   frontend = File.read("#{dir}/frontend/index.html")
-  raise "frontend doesn't reference 'message' field from backend" unless frontend.include?("data.message")
+  raise "frontend doesn't reference '#{field}' field from backend (#{body.inspect})" unless frontend.include?("data.#{field}")
 
-  puts "PASS: backend served #{body.inspect}, frontend reads matching field"
+  puts "PASS: backend served #{body.inspect}, frontend reads matching field '#{field}'"
 ensure
   Process.kill("INT", pid)
   Process.wait(pid)
