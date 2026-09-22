@@ -152,6 +152,6 @@ test_cases.each do |tc|
   evaluations << ["overall", score.to_f / max_score, grade, diff]
   post_eval_span identity, trace_id, span_id, span_start, span_end,
     { eval_finish_reason: eval_finish_reason, turns: turns, tool_call_count: tool_call_count,
-      grade: grade, score: score, max_score: max_score }, scored_at, evaluations
+      grade: grade, score: score, max_score: max_score, "app.eval.changelog": changelog }, scored_at, evaluations
 end
 end
