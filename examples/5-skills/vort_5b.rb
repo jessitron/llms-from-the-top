@@ -4,52 +4,20 @@ require "net/http"
 require "json"
 require "securerandom"
 
-SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. You verify the results of your changes with tests. Before editing CHANGELOG.md, call load_skill(\"changelog\") to learn this project's convention for changelog entries. Before writing a commit message, call load_skill(\"commit_message\")."
+AGENTS_INSTRUCTION_FILE = "AGENTS.md"
 
-SKILLS = {
-  "changelog" => <<~SKILL,
-    Changelog entries in this project follow this format:
+SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. You read the documentation. You verify the results of your changes with tests. #{File.exist?(AGENTS_INSTRUCTION_FILE) ? File.read(AGENTS_INSTRUCTION_FILE) : ""}"
 
-    ## YYYY.MM.DD <emoji> <lowercase past-tense summary, no period> — <component tag>
-
-    Emoji vocabulary:
-      ✨ feature
-      🐛 fix
-      🔧 chore/tweak
-      📝 docs
-      ⚡ perf
-      💥 breaking change
-
-    A 💥 entry is always followed by an indented `migrate:` line explaining the upgrade, e.g.:
-
-    ## 2024.02.01 💥 renamed --name positional arg to --name flag — greeter
-       migrate: replace `greeter Alice` with `greeter --name Alice`
-
-    New entries go at the top of the file, above the existing entries.
-  SKILL
-  "commit_message" => <<~SKILL,
-    Commit messages in this project follow this format:
-
-    <emoji> <lowercase imperative summary, no period>
-
-    Emoji vocabulary:
-      ✨ feature
-      🐛 fix
-      🔧 chore/tweak
-      📝 docs
-      ⚡ perf
-      💥 breaking change
-
-    Keep the summary to one line. No body unless asked for one.
-  SKILL
-}
+SKILLS = [{ skill: "changelog", description: "Load this when creating a changelog entry", file: "skills/changelog.md"} ,
+          { skill: "commit-message", description: "Load this when before you write a commit message", file: "skills/commit-message.md"}]
+SKILL_TOOL_DESCRIPTION = "Available skills: " + SKILLS.map { |s| "#{s[:skill]} - #{s[:description]}" }.join(", ")
 
 TOOLS = [
   { type: "function", function: { name: "list_files", description: "List files in the current directory", parameters: { type: "object", properties: {} } } },
   { type: "function", function: { name: "read_file", description: "Read a file's contents", parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" } }, required: ["path"] } } },
   { type: "function", function: { name: "write_file", description: "Write content to a file", parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" }, content: { type: "string", description: "content to write" } }, required: ["path", "content"] } } },
   { type: "function", function: { name: "run_command", description: "Run a shell command and get its output, e.g. to run tests", parameters: { type: "object", properties: { command: { type: "string", description: "the shell command to run" } }, required: ["command"] } } },
-  { type: "function", function: { name: "load_skill", description: "Load this project's convention for a given kind of task", parameters: { type: "object", properties: { name: { type: "string", description: "which skill to load", enum: SKILLS.keys } }, required: ["name"] } } }
+  { type: "function", function: { name: "load_skill", description: SKILL_TOOL_DESCRIPTION, parameters: { type: "object", properties: { skill: { type: "string", description: "the name of the skill to load" } }, required: ["skill"] } } }
 ]
 
 HANDLERS = {
@@ -57,7 +25,7 @@ HANDLERS = {
   "read_file" => ->(args) { File.exist?(args["path"]) ? File.read(args["path"], encoding: "UTF-8")[0..MAX_FILE_READ] : "File not found <#{args["path"]}>" },
   "write_file" => ->(args) { File.write(args["path"], args["content"]); "wrote #{args["content"].length} bytes to #{args["path"]}" },
   "run_command" => ->(args) { `#{args["command"]} 2>&1` },
-  "load_skill" => ->(args) { SKILLS[args["name"]] || "Unknown skill <#{args["name"]}>" }
+  "load_skill" => ->(args) { File.read(SKILLS.find { |s| s[:skill] == args["skill"] }[:file], encoding: "UTF-8")[0..MAX_FILE_READ] }
 }
 
 MODEL = ENV["MODEL"] || "haiku"
@@ -77,7 +45,7 @@ loop do
     response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/chat/completions"), request.to_json, {
       "content-type": "application/json",
       "x-api-key": "exploreddd",
-      "x-agent-name": "vort_5b",
+      "x-agent-name": "vort_5a",
       "x-conversation-id": CONVERSATION_ID
     }
     case response
