@@ -12,9 +12,12 @@ require_relative '../../eval_telemetry'
 
 dir = __dir__
 vort_dir = File.dirname(dir)
-program = ARGV[0] || "vort_4d.rb"
-workspace_dir = "#{dir}/workspace"
 max_nudges = 5
+
+runs = [
+  { program: "vort_5a.rb", workspace_dir: "#{dir}/workspace-5a" },
+  { program: "vort_5b.rb", workspace_dir: "#{dir}/workspace-5b" },
+]
 
 test_cases = [
   {
@@ -57,6 +60,9 @@ def score_changelog(changelog, original_top_line)
   }
 end
 
+runs.each do |run|
+program = run[:program]
+workspace_dir = run[:workspace_dir]
 original_top_line = File.read("#{workspace_dir}/CHANGELOG.md").lines.map(&:chomp).find { |l| l.start_with?("## ") }
 
 test_cases.each do |tc|
@@ -126,4 +132,5 @@ test_cases.each do |tc|
   post_eval_span identity, trace_id, span_id, span_start, span_end,
     { eval_finish_reason: eval_finish_reason, turns: turns, tool_call_count: tool_call_count,
       grade: grade, score: score, max_score: MAX_SCORE }, scored_at, evaluations
+end
 end
