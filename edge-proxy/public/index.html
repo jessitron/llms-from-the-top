@@ -9,6 +9,9 @@
     code, pre { background: #f2f2f2; padding: 0.15em 0.4em; border-radius: 4px; }
     pre { padding: 0.75em; overflow-x: auto; }
     h1 { font-size: 1.5rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 0.4em 0.6em; border-bottom: 1px solid #ddd; }
+    th { border-bottom: 2px solid #999; }
   </style>
 </head>
 <body>
@@ -82,5 +85,24 @@
     <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/3-system-prompt/README.md"><code>examples/3-system-prompt/README.md</code></a> — adding a system message</li>
     <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/4-tools/README.md"><code>examples/4-tools/README.md</code></a> — tool definitions, tool calls, tool results</li>
   </ul>
+
+  <h2>Available models</h2>
+  <table>
+    <thead>
+      <tr><th>Alias</th><th>Real model</th><th>Size</th><th>Inference server</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>base</code></td><td>mistralai/Mistral-7B-v0.1</td><td>7B</td><td>Modal (vLLM)</td></tr>
+      <tr><td><code>chat</code></td><td>mistralai/Mistral-7B-Instruct-v0.1</td><td>7B</td><td>Modal (vLLM)</td></tr>
+      <tr><td><code>better</code></td><td>mistralai/Mistral-Small-3.2-24B-Instruct-2506</td><td>24B</td><td>Modal (vLLM)</td></tr>
+      <tr><td><code>haiku</code></td><td>claude-haiku-4-5</td><td>undisclosed</td><td>Anthropic API</td></tr>
+      <tr><td><code>luna</code></td><td>gpt-4o-mini</td><td>undisclosed</td><td>OpenAI API</td></tr>
+      <tr><td><code>nano</code></td><td>gpt-4.1-nano</td><td>undisclosed</td><td>OpenAI API</td></tr>
+    </tbody>
+  </table>
+  <p><code>base</code> isn't instruction-tuned, so it only makes sense on
+  <code>/v1/completions</code>. Everything else — including <code>chat</code> — works on
+  <code>/v1/chat/completions</code>; <code>haiku</code>, <code>luna</code>, and <code>nano</code>
+  support that endpoint only.</p>
 </body>
 </html>
