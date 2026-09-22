@@ -4,35 +4,52 @@ require "net/http"
 require "json"
 require "securerandom"
 
-SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. You verify the results of your changes with tests. Before editing CHANGELOG.md, call the changelog_skill tool to learn this project's convention for changelog entries."
+SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. You verify the results of your changes with tests. Before editing CHANGELOG.md, call load_skill(\"changelog\") to learn this project's convention for changelog entries. Before writing a commit message, call load_skill(\"commit_message\")."
 
-CHANGELOG_SKILL = <<~SKILL
-  Changelog entries in this project follow this format:
+SKILLS = {
+  "changelog" => <<~SKILL,
+    Changelog entries in this project follow this format:
 
-  ## YYYY.MM.DD <emoji> <lowercase past-tense summary, no period> — <component tag>
+    ## YYYY.MM.DD <emoji> <lowercase past-tense summary, no period> — <component tag>
 
-  Emoji vocabulary:
-    ✨ feature
-    🐛 fix
-    🔧 chore/tweak
-    📝 docs
-    ⚡ perf
-    💥 breaking change
+    Emoji vocabulary:
+      ✨ feature
+      🐛 fix
+      🔧 chore/tweak
+      📝 docs
+      ⚡ perf
+      💥 breaking change
 
-  A 💥 entry is always followed by an indented `migrate:` line explaining the upgrade, e.g.:
+    A 💥 entry is always followed by an indented `migrate:` line explaining the upgrade, e.g.:
 
-  ## 2024.02.01 💥 renamed --name positional arg to --name flag — greeter
-     migrate: replace `greeter Alice` with `greeter --name Alice`
+    ## 2024.02.01 💥 renamed --name positional arg to --name flag — greeter
+       migrate: replace `greeter Alice` with `greeter --name Alice`
 
-  New entries go at the top of the file, above the existing entries.
-SKILL
+    New entries go at the top of the file, above the existing entries.
+  SKILL
+  "commit_message" => <<~SKILL,
+    Commit messages in this project follow this format:
+
+    <emoji> <lowercase imperative summary, no period>
+
+    Emoji vocabulary:
+      ✨ feature
+      🐛 fix
+      🔧 chore/tweak
+      📝 docs
+      ⚡ perf
+      💥 breaking change
+
+    Keep the summary to one line. No body unless asked for one.
+  SKILL
+}
 
 TOOLS = [
   { type: "function", function: { name: "list_files", description: "List files in the current directory", parameters: { type: "object", properties: {} } } },
   { type: "function", function: { name: "read_file", description: "Read a file's contents", parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" } }, required: ["path"] } } },
   { type: "function", function: { name: "write_file", description: "Write content to a file", parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" }, content: { type: "string", description: "content to write" } }, required: ["path", "content"] } } },
   { type: "function", function: { name: "run_command", description: "Run a shell command and get its output, e.g. to run tests", parameters: { type: "object", properties: { command: { type: "string", description: "the shell command to run" } }, required: ["command"] } } },
-  { type: "function", function: { name: "changelog_skill", description: "Get this project's convention for writing CHANGELOG.md entries", parameters: { type: "object", properties: {} } } }
+  { type: "function", function: { name: "load_skill", description: "Load this project's convention for a given kind of task", parameters: { type: "object", properties: { name: { type: "string", description: "which skill to load", enum: SKILLS.keys } }, required: ["name"] } } }
 ]
 
 HANDLERS = {
@@ -40,7 +57,7 @@ HANDLERS = {
   "read_file" => ->(args) { File.exist?(args["path"]) ? File.read(args["path"], encoding: "UTF-8")[0..MAX_FILE_READ] : "File not found <#{args["path"]}>" },
   "write_file" => ->(args) { File.write(args["path"], args["content"]); "wrote #{args["content"].length} bytes to #{args["path"]}" },
   "run_command" => ->(args) { `#{args["command"]} 2>&1` },
-  "changelog_skill" => ->(_) { CHANGELOG_SKILL }
+  "load_skill" => ->(args) { SKILLS[args["name"]] || "Unknown skill <#{args["name"]}>" }
 }
 
 MODEL = ENV["MODEL"] || "haiku"
