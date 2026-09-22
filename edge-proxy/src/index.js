@@ -57,12 +57,24 @@ class BaggageSpanProcessor {
 
 const WORKSHOP_REPO = "https://github.com/jessitron/llms-from-the-top";
 
+// @microlabs/otel-cf-workers names the root span "fetchHandler <METHOD>" by
+// default (see its fetchInstrumentation.getInitialSpanInfo). Renaming it
+// here to "<endpoint> <METHOD>" (e.g. "chat POST") makes the trace list
+// readable at a glance instead of every request looking the same.
+function endpointName(pathname) {
+  const afterV1 = pathname.replace(/^\/v1\//, "");
+  return afterV1.split("/")[0];
+}
+
 const handler = {
   async fetch(request, env) {
     if (request.method === "GET") return Response.redirect(WORKSHOP_REPO, 302);
 
     const authError = checkAuth(request, env);
     if (authError) return authError;
+
+    const pathname = new URL(request.url).pathname;
+    trace.getActiveSpan()?.updateName(`${endpointName(pathname)} ${request.method}`);
 
     const conversationId = request.headers.get("x-conversation-id") || crypto.randomUUID();
     const agentName = request.headers.get("x-agent-name") || "secret agent";
