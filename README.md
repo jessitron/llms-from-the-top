@@ -44,6 +44,7 @@ THe API provided for this workshop (llms-from-the-top.jessitron.com) sends telem
 
 [What people are asking and the responses they get](https://play.honeycomb.io/sandbox/environments/workshop/datasets/llms-from-the-top-edge-proxy/result/diw7mXMuTzk)
 
+[scores and token counts by conversation](https://play.honeycomb.io/sandbox/environments/workshop/result/sJ7aeLhMx1x)
 
 ## This Repository
 
