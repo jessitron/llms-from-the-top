@@ -21,13 +21,13 @@ LLMs that are assistant-trained know how to answer questions.
 
 The model should continue from there.
 
-The default model at my API is a base model, Mistral-7B, which is 
+The default model at my API is a base model, Mistral-7B, which is
 
 ## Now make it chat
 
-To make it answer questions, we use a different model. One trained for chat. 
+To make it answer questions, we use a different model. One trained for chat.
 
-- Change the model from "base" to "chat" 
+- Change the model from "base" to "chat"
 
 ## Workshop Completions API
 
@@ -37,6 +37,8 @@ HTTP headers:
 
 - `content-type: application/json`
 - `x-api-key: exploreddd`
+- (optional) `x-conversation-id: <a unique ID for this agent run, like a UUID>`
+- (optional) `x-agent-name: <your agent's name>`
 
 Input format (JSON body):
 
@@ -52,9 +54,7 @@ Output format (JSON body, vLLM's OpenAI-compatible completions response):
 
 ```json
 {
-  "choices": [
-    { "text": " ...continuation...", "finish_reason": "stop" }
-  ]
+  "choices": [{ "text": " ...continuation...", "finish_reason": "stop" }]
 }
 ```
 
