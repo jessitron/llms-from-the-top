@@ -1,1 +1,3 @@
 wrangler deploy
+
+echo "https://llms-from-the-top.jessitron.com"
