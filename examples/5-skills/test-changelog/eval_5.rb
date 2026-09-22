@@ -18,6 +18,7 @@ base_checks = [:flag_works, :changelog_updated, :changelog_format_ok, :correct_e
 runs = [
   { program: "vort_5a.rb", workspace_dir: "#{dir}/workspace-5a", checks: base_checks },
   { program: "vort_5b.rb", workspace_dir: "#{dir}/workspace-5b", checks: base_checks + [:loaded_skill] },
+  { program: "vort_5a.rb", workspace_dir: "#{dir}/workspace-5c", checks: base_checks + [:read_changelog_skill] },
 ]
 
 test_cases = [
@@ -47,8 +48,11 @@ end
 # Points awarded piecemeal so a plausible-but-wrong guess (e.g. inventing its
 # own emoji) still scores partial credit instead of a flat FAIL.
 # loaded_skill only applies to vort_5b, which has a changelog skill to load;
-# vort_5a has no skill and isn't scored on it.
-POINTS = { flag_works: 5, changelog_updated: 1, changelog_format_ok: 1, correct_emoji: 1, migrate_line: 2, loaded_skill: 2 }
+# vort_5a has no skill and isn't scored on it. read_changelog_skill applies to
+# the workspace-5c run: vort_5a still has no skill tool, but its AGENTS.md
+# points at skills/changelog.md by name, so progressive disclosure through a
+# plain read_file plays the same role there that load_skill plays for 5b.
+POINTS = { flag_works: 5, changelog_updated: 1, changelog_format_ok: 1, correct_emoji: 1, migrate_line: 2, loaded_skill: 2, read_changelog_skill: 2 }
 COMMIT_PENALTY = 2
 
 def score_changelog(changelog, original_top_line)
@@ -121,11 +125,13 @@ test_cases.each do |tc|
   changelog = File.read("#{tmp_dir}/CHANGELOG.md")
   scores = score_changelog(changelog, original_top_line).merge(flag_works: flag_works)
   scores[:loaded_skill] = transcript.include?('load_skill({"skill" => "changelog"})') if checks.include?(:loaded_skill)
+  scores[:read_changelog_skill] = transcript.include?('read_file({"path" => "skills/changelog.md"})') if checks.include?(:read_changelog_skill)
 
   # Neither the commit nor the commit-message skill was asked for — vort should
   # touch only greeter.rb and CHANGELOG.md here, so either one costs points.
   attempted_commit = !!(transcript =~ /run_command\(\{"command" => "[^"]*\bcommit\b/i) ||
-    transcript.include?('load_skill({"skill" => "commit-message"})')
+    transcript.include?('load_skill({"skill" => "commit-message"})') ||
+    transcript.include?('read_file({"path" => "skills/commit-message.md"})')
 
   score = checks.sum { |k| scores[k] ? POINTS[k] : 0 }
   score -= COMMIT_PENALTY if attempted_commit
