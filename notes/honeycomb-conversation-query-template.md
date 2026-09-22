@@ -5,6 +5,11 @@ across all datasets in the `llms-from-the-top` environment (api,
 edge-proxy, eval-harness, evals — a conversation's spans can land in more
 than one).
 
+## Public dataset
+
+I'm sending telemetry from this project to a `workshop` environment in Honeycomb's `sandbox` team.
+That team is accessible at `play.honeycomb.io` without login. Not the whole interface, but queries and traces. So if we link people there, they can just get there.
+
 ## Column
 
 `gen_ai.conversation.id` — present on `llms-from-the-top-api`,
@@ -21,7 +26,7 @@ real id (plain find-and-replace works — a UUID has no characters that
 need re-encoding), and open it:
 
 ```
-https://ui.honeycomb.io/modernity/environments/llms-from-the-top?query=%7B%22time_range%22%3A604800%2C%22granularity%22%3A0%2C%22breakdowns%22%3A%5B%5D%2C%22calculations%22%3A%5B%7B%22op%22%3A%22COUNT%22%7D%5D%2C%22filters%22%3A%5B%7B%22column%22%3A%22gen_ai.conversation.id%22%2C%22op%22%3A%22%3D%22%2C%22value%22%3A%22REPLACE_WITH_CONVERSATION_ID%22%7D%5D%2C%22filter_combination%22%3A%22AND%22%2C%22orders%22%3A%5B%7B%22op%22%3A%22COUNT%22%2C%22order%22%3A%22descending%22%7D%5D%2C%22limit%22%3A1000%7D
+https://play.honeycomb.io/sandbox/environments/workshop?query=%7B%22time_range%22%3A604800%2C%22granularity%22%3A0%2C%22breakdowns%22%3A%5B%5D%2C%22calculations%22%3A%5B%7B%22op%22%3A%22COUNT%22%7D%5D%2C%22filters%22%3A%5B%7B%22column%22%3A%22gen_ai.conversation.id%22%2C%22op%22%3A%22%3D%22%2C%22value%22%3A%22REPLACE_WITH_CONVERSATION_ID%22%7D%5D%2C%22filter_combination%22%3A%22AND%22%2C%22orders%22%3A%5B%7B%22op%22%3A%22COUNT%22%2C%22order%22%3A%22descending%22%7D%5D%2C%22limit%22%3A1000%7D
 ```
 
 That decodes to:
@@ -31,18 +36,23 @@ That decodes to:
   "time_range": 604800,
   "granularity": 0,
   "breakdowns": [],
-  "calculations": [{"op": "COUNT"}],
+  "calculations": [{ "op": "COUNT" }],
   "filters": [
-    {"column": "gen_ai.conversation.id", "op": "=", "value": "REPLACE_WITH_CONVERSATION_ID"}
+    {
+      "column": "gen_ai.conversation.id",
+      "op": "=",
+      "value": "REPLACE_WITH_CONVERSATION_ID"
+    }
   ],
   "filter_combination": "AND",
-  "orders": [{"op": "COUNT", "order": "descending"}],
+  "orders": [{ "op": "COUNT", "order": "descending" }],
   "limit": 1000
 }
 ```
 
 `time_range` is in seconds (604800 = 7 days) — widen it if the
-conversation is older. Once it's open, add breakdowns/columns or switch
+conversation is older. Shrink it to 30 minutes if the conversation is recent.
+Once it's open, add breakdowns/columns or switch
 to the Trace view on a result to see the spans themselves; the filter is
 the part that matters and it's already scoped to all datasets.
 
@@ -58,11 +68,22 @@ raw rows instead of opening a browser:
   "environment_wide_query": true,
   "query_spec": {
     "filters": [
-      {"column": "gen_ai.conversation.id", "op": "=", "value": "<conversation_id>"}
+      {
+        "column": "gen_ai.conversation.id",
+        "op": "=",
+        "value": "<conversation_id>"
+      }
     ],
     "from": "-7d"
   },
-  "raw_row_columns": ["service.name", "name", "gen_ai.conversation.id", "trace.trace_id", "trace.span_id", "duration_ms"]
+  "raw_row_columns": [
+    "service.name",
+    "name",
+    "gen_ai.conversation.id",
+    "trace.trace_id",
+    "trace.span_id",
+    "duration_ms"
+  ]
 }
 ```
 
