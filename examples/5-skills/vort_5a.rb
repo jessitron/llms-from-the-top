@@ -4,7 +4,10 @@ require "net/http"
 require "json"
 require "securerandom"
 
-SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. You verify the results of your changes with tests."
+AGENTS_INSTRUCTION_FILE = "AGENTS.md"
+
+SYSTEM_PROMPT = "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. You verify the results of your changes with tests. #{File.exist?(AGENTS_INSTRUCTION_FILE) ? File.read(AGENTS_INSTRUCTION_FILE) : ""}"
+
 
 TOOLS = [
   { type: "function", function: { name: "list_files", description: "List files in the current directory", parameters: { type: "object", properties: {} } } },
