@@ -1,4 +1,8 @@
-## Changelog
+# Changelog
+
+Trigger: Load this when creating a changelog entry.
+
+## Instructions
 
 Changelog entries in this project follow this format:
 

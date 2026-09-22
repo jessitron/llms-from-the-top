@@ -1,3 +1,7 @@
+# Commit message
+
+Trigger: Load this before writing a commit message.
+
 ## Commit message style
 
 Commit messages in this project follow this format:
