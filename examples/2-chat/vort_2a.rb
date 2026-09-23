@@ -6,6 +6,7 @@ require "securerandom"
 
 # a random uuid
 CONVERSATION_ID = ENV["CONVERSATION_ID"] || SecureRandom.uuid
+puts "Conversation ID: #{CONVERSATION_ID}"
 
 loop do
   print "vort> "

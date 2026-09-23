@@ -5,6 +5,7 @@ require "json"
 require "securerandom"
 
 CONVERSATION_ID = ENV["CONVERSATION_ID"] || SecureRandom.uuid
+puts "Conversation ID: #{CONVERSATION_ID}"
 
 print "vort> "
 input = gets.chomp

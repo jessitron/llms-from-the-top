@@ -65,7 +65,7 @@ test_cases.each do |tc|
       stdin_data: tc[:input]
     )
   span_end = Time.now
-  answer = output.sub(/\Avort> /, "")
+  answer = output.sub(/\AConversation ID: .*\n/, "").sub(/\Avort> /, "")
 
   puts answer
 

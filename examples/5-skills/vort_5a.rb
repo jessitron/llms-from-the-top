@@ -99,6 +99,7 @@ MODEL = ENV["MODEL"] || "haiku"
 MAX_FILE_READ = 2000
 
 CONVERSATION_ID = ENV["CONVERSATION_ID"] || SecureRandom.uuid
+puts "Conversation ID: #{CONVERSATION_ID}"
 
 messages = [{ role: "system", content: SYSTEM_PROMPT }]
 loop do

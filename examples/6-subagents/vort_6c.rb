@@ -249,6 +249,7 @@ BASE_HANDLERS = {
 }.freeze
 
 CONVERSATION_ID = ENV["CONVERSATION_ID"] || SecureRandom.uuid
+puts "Conversation ID: #{CONVERSATION_ID}"
 
 TOP_HANDLERS = {
   "list_files" => ->(_) { Dir.children(".").join("\n") },

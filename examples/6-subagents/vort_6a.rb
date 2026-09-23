@@ -282,6 +282,7 @@ TOP_HANDLERS = {
 }.freeze
 
 conversation_id = ENV["CONVERSATION_ID"] || SecureRandom.uuid
+puts "Conversation ID: #{conversation_id}"
 
 messages = [{ role: "system", content: SYSTEM_PROMPT }]
 loop do

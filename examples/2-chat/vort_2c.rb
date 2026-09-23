@@ -7,6 +7,7 @@ require "securerandom"
 model = ENV["MODEL"] || "chat"
 
 CONVERSATION_ID = ENV["CONVERSATION_ID"] || SecureRandom.uuid
+puts "Conversation ID: #{CONVERSATION_ID}"
 
 messages = []
 loop do
