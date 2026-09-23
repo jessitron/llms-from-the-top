@@ -36,7 +36,7 @@ URI: https://llms-from-the-top.jessitron.com/v1/completions
 HTTP headers:
 
 - `content-type: application/json`
-- `x-api-key: exploreddd`
+- `x-api-key: exploreddd` (the examples read `API_KEY` from the environment, defaulting to this)
 - (optional) `x-conversation-id: <a unique ID for this agent run, like a UUID>`
 - (optional) `x-agent-name: <your agent's name>`
 

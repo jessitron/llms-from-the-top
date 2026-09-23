@@ -135,7 +135,7 @@ def call_model(messages, tools, conversation_id, agent_name)
                  request.to_json,
                  {
                    "content-type": "application/json",
-                   "x-api-key": "exploreddd",
+                   "x-api-key": ENV["API_KEY"] || "exploreddd",
                    "x-agent-name": agent_name,
                    "x-conversation-id": conversation_id,
                    **headers

@@ -25,7 +25,7 @@ tokenize_response =
                  tokenize_request.to_json,
                  {
                    "content-type": "application/json",
-                   "x-api-key": "exploreddd"
+                   "x-api-key": ENV["API_KEY"] || "exploreddd"
                  }
 tokens = JSON.parse(tokenize_response.body)["tokens"]
 puts "#{tokens.length} tokens: #{tokens}"
@@ -36,7 +36,7 @@ detokenize_response =
                  detokenize_request.to_json,
                  {
                    "content-type": "application/json",
-                   "x-api-key": "exploreddd"
+                   "x-api-key": ENV["API_KEY"] || "exploreddd"
                  }
 puts "Detokenized prompt:"
 puts JSON.parse(detokenize_response.body)["prompt"]

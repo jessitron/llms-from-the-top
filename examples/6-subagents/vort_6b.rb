@@ -122,7 +122,7 @@ def call_model(messages, tools, conversation_id)
                  request.to_json,
                  {
                    "content-type": "application/json",
-                   "x-api-key": "exploreddd",
+                   "x-api-key": ENV["API_KEY"] || "exploreddd",
                    "x-agent-name": "vort_6b",
                    "x-conversation-id": conversation_id
                  }

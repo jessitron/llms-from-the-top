@@ -115,7 +115,7 @@ loop do
                      request.to_json,
                      {
                        "content-type": "application/json",
-                       "x-api-key": "exploreddd",
+                       "x-api-key": ENV["API_KEY"] || "exploreddd",
                        "x-agent-name": "vort_4e",
                        "x-conversation-id": CONVERSATION_ID
                      }
