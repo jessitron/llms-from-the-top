@@ -521,6 +521,8 @@ export async function routeToBackend(request, env) {
       span?.setAttribute("gen_ai.tool.definitions", genAiToolDefinitions(body.tools));
     }
   }
+  const isCompletion = incoming.pathname === "/v1/completions" && typeof body?.prompt === "string";
+  if (isCompletion) span?.setAttribute("jess.last_input", body.prompt);
 
   const backendUrl =
     body?.model === "base"
@@ -558,6 +560,10 @@ export async function routeToBackend(request, env) {
   upstreamRequest.headers.set("host", upstream.hostname);
 
   const response = await fetchUpstream(upstreamRequest);
+  if (isCompletion && response.ok) {
+    const text = (await response.clone().json()).choices?.[0]?.text;
+    if (typeof text === "string") span?.setAttribute("jess.completion", text);
+  }
   if (!isChat || !response.ok) return response;
 
   const responseBody = await response.json();

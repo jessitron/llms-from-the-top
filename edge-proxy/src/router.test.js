@@ -174,6 +174,19 @@ describe("routeToBackend", () => {
     expect(sentBody.max_tokens).toBe(42);
   });
 
+  it("sets jess.last_input and jess.completion on /v1/completions", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ model: "base", choices: [{ text: " there was a cat", finish_reason: "length" }] }),
+    );
+    const res = await routeToBackend(
+      request("/v1/completions", { body: { model: "base", prompt: "Once upon a time" } }),
+      env,
+    );
+    expect(capturedAttributes["jess.last_input"]).toBe("Once upon a time");
+    expect(capturedAttributes["jess.completion"]).toBe(" there was a cat");
+    expect((await res.json()).choices[0].text).toBe(" there was a cat");
+  });
+
   it("passes through GET-like bodyless requests unchanged", async () => {
     await routeToBackend(request("/v1/models", { method: "GET" }), env);
     const [upstreamRequest] = fetchMock.mock.calls[0];
