@@ -238,4 +238,5 @@ runs.each do |run|
                  },
                  scored_at,
                  evaluations
+  puts "trace: #{trace_link(trace_id, span_id, span_start, scored_at)}"
 end

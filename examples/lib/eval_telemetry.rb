@@ -95,3 +95,19 @@ def post_eval_span(
                  body.to_json,
                  { "content-type": "application/json" }
 end
+
+# same link format edge-proxy puts on every chat response (see traceLink in
+# edge-proxy/src/router.js): Honeycomb's open sandbox, where anyone can open
+# a trace without logging in. The collector fans out there too, so the eval
+# span shows up in the workshop environment's llms-from-the-top-evals dataset.
+# trace_start_ts/trace_end_ts only need to bound the search window.
+def trace_link(trace_id, span_id, start_time, end_time)
+  params =
+    URI.encode_www_form(
+      trace_id: trace_id,
+      span: span_id,
+      trace_start_ts: start_time.to_i - 60,
+      trace_end_ts: end_time.to_i + 60
+    )
+  "https://play.honeycomb.io/sandbox/environments/workshop/datasets/#{HONEYCOMB_SERVICE_NAME}/trace?#{params}"
+end
