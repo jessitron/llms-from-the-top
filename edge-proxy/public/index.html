@@ -25,6 +25,41 @@
   <h2>Calling the API</h2>
   <p>Every request needs an <code>x-api-key</code> header — ask Jess for the value.</p>
 
+  <h2>See your conversation in Honeycomb</h2>
+  <p>If you send an <code>x-conversation-id</code> header, paste that ID here to get a link to
+  every chat request in that conversation — what went in last, what came back, and how many
+  input tokens it took. Covers the last 2 hours.</p>
+  <p>
+    <label for="conversation-id">Conversation ID:</label>
+    <input id="conversation-id" type="text" size="40" placeholder="620144cf-d9c5-4770-969d-663f3f0dac90" />
+  </p>
+  <p id="conversation-link-p" hidden><a id="conversation-link" target="_blank">Open this conversation in Honeycomb</a></p>
+  <script>
+    const conversationInput = document.getElementById("conversation-id");
+    conversationInput.addEventListener("input", () => {
+      const id = conversationInput.value.trim();
+      const query = {
+        time_range: 7200,
+        granularity: 0,
+        breakdowns: ["gen_ai.conversation.id", "jess.last_input", "jess.completion"],
+        calculations: [{ op: "MAX", column: "gen_ai.usage.input_tokens" }],
+        filters: [
+          { column: "gen_ai.conversation.id", op: "=", value: id },
+          { column: "name", op: "=", value: "chat POST" },
+        ],
+        filter_combination: "AND",
+        orders: [{ column: "gen_ai.usage.input_tokens", op: "MAX", order: "ascending" }],
+        havings: [],
+        limit: 1000,
+        formulas: [],
+      };
+      document.getElementById("conversation-link").href =
+        "https://play.honeycomb.io/sandbox/environments/workshop/datasets/llms-from-the-top-edge-proxy?query=" +
+        encodeURIComponent(JSON.stringify(query));
+      document.getElementById("conversation-link-p").hidden = !id;
+    });
+  </script>
+
   <h2><code>/v1/completions</code></h2>
   <p>Raw text completion. Given a prompt, the model continues it. No chat structure, no
   instruction-following unless the model happens to have been trained for it.</p>
