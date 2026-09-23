@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# For participants who have Docker but not Ruby 3.4 (or not Ruby at all):
+# builds the image from ./Dockerfile and drops you into a shell in it, with
+# examples/ ready to run, e.g. `ruby examples/1-completions/vort_1a.rb`.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+docker build -t llms-from-the-top-examples .
+docker run --rm -it llms-from-the-top-examples
