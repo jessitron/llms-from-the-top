@@ -7,23 +7,13 @@ message history — does a task there, and hands back only the final result.
 ## Notice first
 
 vort already has `run_command`, which is a shell. If the "why" for a
-subagent is "so it can work in a different directory," that's not a reason
-— vort can already `cd`. Don't reach for a subagent just for filesystem
-scoping.
-
-## Try this
-
-`test-webapp/` still shows a real risk of subagents, though: point vort_6a
-at it and ask it to rename a field across `frontend/` and `backend/` by
-forking one subagent per directory. Each subagent only sees its own side,
-so nothing forces them to agree on the new name — you may get `greeting` on
-one side and `greeting_text` on the other. `ruby test-webapp/test_integration.rb`
-checks whether they agreed. This is a caution about *isolation*, not a
-reason to use subagents.
+subagent were "so it can work in a different directory," that wouldn't be a
+reason — vort can already `cd`. Don't reach for a subagent just for
+filesystem scoping.
 
 ## Do this
 
-The real reasons to reach for a subagent, shown in vort_6b:
+The real reasons to reach for a subagent, shown in vort_6a:
 
 1. **A clean, disposable context.** A skill (see `../5-skills`) loads
    instructions into the *calling* agent's own conversation, where they sit
@@ -42,11 +32,11 @@ The real reasons to reach for a subagent, shown in vort_6b:
    `read_file` and `run_command` — it has no way to edit a file. Each
    subagent can only do the kind of damage its job requires.
 
-Example: vort_6b.rb
+Example: vort_6a.rb
 
 ## Try this
 
-Point vort_6b at `test-changelog/workspace/` (same fixture as `../5-skills`'
+Point vort_6a at `test-changelog/workspace/` (same fixture as `../5-skills`'
 workspace-5b — `greeter.rb`, `CHANGELOG.md`, `AGENTS.md`) and ask it to add
 a feature, e.g. "add a `--shout` flag that uppercases the greeting, don't
 forget to update the changelog." Then ask it to commit. Watch the console:
@@ -56,7 +46,7 @@ subagent's own reads, writes, or `git diff` calls.
 
 ## Notice that
 
-vort_6b's top-level `AGENTS.md` doesn't say anything about changelog format
+vort_6a's top-level `AGENTS.md` doesn't say anything about changelog format
 or commit style — it just says "update the changelog" and "commit when
 instructed." The *how* lives entirely inside the two subagent tools, not in
 anything the top-level model has to read, remember, or get right itself.
