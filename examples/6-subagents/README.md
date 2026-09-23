@@ -1,5 +1,9 @@
 # 6 Subagents
 
+---
+
+Claude wrote this, I won't ask anyone to read it because I haven't yet:
+
 A subagent is a tool call that, instead of doing one small thing, starts a
 whole new conversation — its own system prompt, its own tools, its own
 message history — does a task there, and hands back only the final result.
@@ -16,7 +20,7 @@ filesystem scoping.
 The real reasons to reach for a subagent, shown in vort_6a:
 
 1. **A clean, disposable context.** A skill (see `../5-skills`) loads
-   instructions into the *calling* agent's own conversation, where they sit
+   instructions into the _calling_ agent's own conversation, where they sit
    forever, competing with everything else in there, resent on every loop.
    A subagent's back-and-forth — reading a file, checking a format, trying
    again — happens in a conversation that gets thrown away once it returns
@@ -24,7 +28,7 @@ The real reasons to reach for a subagent, shown in vort_6a:
    own context.
 2. **A procedure that can't be skipped or half-followed.** A skill is
    optional: vort has to notice it should load one, then correctly apply it
-   itself. A subagent's entire system prompt *is* the procedure — there's
+   itself. A subagent's entire system prompt _is_ the procedure — there's
    nothing else in its context to get distracted by.
 3. **Restricted tools per job.** `write_changelog_entry` delegates to a
    subagent that can only `read_file` and `write_file` — it has no way to
@@ -48,5 +52,5 @@ subagent's own reads, writes, or `git diff` calls.
 
 vort_6a's top-level `AGENTS.md` doesn't say anything about changelog format
 or commit style — it just says "update the changelog" and "commit when
-instructed." The *how* lives entirely inside the two subagent tools, not in
+instructed." The _how_ lives entirely inside the two subagent tools, not in
 anything the top-level model has to read, remember, or get right itself.
