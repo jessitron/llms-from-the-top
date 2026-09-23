@@ -40,6 +40,14 @@ This is the planned material, but if we get off on tangents, great! The point is
 5. Give skills to make it smarter.
 6. Maybe we'll talk about subagents.
 
+## Running the examples
+
+You can write your own code, and/or run the examples in this repo.
+
+To run the examples, you need Ruby 3.4.6 or better. If you don't have Ruby installed, this will open a prompt in a suitable container:
+
+`./run-in-docker`
+
 ## Telemetry
 
 THe API provided for this workshop (llms-from-the-top.jessitron.com) sends telemetry to Honeycomb. We are gonna look at that during the workshop. You can look at some of it, too, as it sends to a Honeycomb sandbox environment. Only part of Honeycomb is available there, but check out
