@@ -569,7 +569,7 @@ describe("routeToAnthropic", () => {
       },
       { role: "user", parts: [{ type: "tool_call_response", id: "call_1", response: "72 and sunny" }] },
     ]);
-    expect(capturedAttributes["jess.last_input"]).toBe("what's the weather in Chicago?");
+    expect(capturedAttributes["jess.last_input"]).toBe('get_weather({"city":"Chicago"}) → 72 and sunny');
   });
 
   it("includes tool_use blocks in gen_ai.output.messages instead of dropping them, and records the raw form", async () => {
@@ -685,6 +685,31 @@ describe("routeToOpenAI", () => {
     expect(capturedAttributes["gen_ai.usage.output_tokens"]).toBe(5);
     expect(capturedAttributes["jess.last_input"]).toBe("hi");
     expect(capturedAttributes["jess.completion"]).toBe("hello there");
+  });
+
+  it("sets jess.last_input to the tool calls and truncated responses when the request ends in tool results", async () => {
+    const body = {
+      model: "luna",
+      messages: [
+        { role: "user", content: "weather in Chicago and Denver?" },
+        {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            { id: "call_1", type: "function", function: { name: "get_weather", arguments: '{"city":"Chicago"}' } },
+            { id: "call_2", type: "function", function: { name: "get_weather", arguments: '{"city":"Denver"}' } },
+          ],
+        },
+        { role: "tool", tool_call_id: "call_1", content: "72 and sunny" },
+        { role: "tool", tool_call_id: "call_2", content: "x".repeat(250) },
+      ],
+    };
+    const incoming = new URL("https://llms-from-the-top.jessitron.com/v1/chat/completions");
+    await routeToOpenAI(body, incoming, env);
+
+    expect(capturedAttributes["jess.last_input"]).toBe(
+      'get_weather({"city":"Chicago"}) → 72 and sunny\n' + `get_weather({"city":"Denver"}) → ${"x".repeat(200)}…`,
+    );
   });
 
   it("sets gen_ai.tool.definitions from the OpenAI tools array", async () => {

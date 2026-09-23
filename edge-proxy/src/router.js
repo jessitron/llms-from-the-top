@@ -101,6 +101,58 @@ function genAiInputMessages(messages) {
 
 // Plain-text pair for easy grouping in Honeycomb (jess.last_input /
 // jess.completion), alongside the structured gen_ai.* attributes above.
+// jess.last_input is whatever the LLM is responding to: usually the most
+// recent user text, but when the request ends in tool results, it's those
+// tool calls and (the start of) their responses instead.
+function lastInputText(messages) {
+  return lastToolResponseText(messages) ?? lastUserInputText(messages);
+}
+
+const TOOL_RESPONSE_PREVIEW_CHARS = 200;
+
+// If the conversation ends with tool results — OpenAI-shaped role:"tool"
+// messages, or an Anthropic-shaped role:"user" message of tool_result
+// blocks — describe each as `name(arguments) → response`, looking up the
+// matching call by id in the earlier assistant messages.
+function lastToolResponseText(messages) {
+  const results = [];
+  for (const message of [...messages].reverse()) {
+    if (message.role === "tool") {
+      results.unshift({ id: message.tool_call_id, content: message.content });
+      continue;
+    }
+    if (message.role === "user" && Array.isArray(message.content)) {
+      const blocks = message.content.filter((block) => block.type === "tool_result");
+      results.unshift(...blocks.map((block) => ({ id: block.tool_use_id, content: block.content })));
+    }
+    break;
+  }
+  if (results.length === 0) return undefined;
+
+  const calls = {};
+  for (const message of messages) {
+    for (const call of message.tool_calls ?? []) {
+      calls[call.id] = { name: call.function.name, arguments: call.function.arguments };
+    }
+    if (Array.isArray(message.content)) {
+      for (const block of message.content) {
+        if (block.type === "tool_use") calls[block.id] = { name: block.name, arguments: JSON.stringify(block.input) };
+      }
+    }
+  }
+
+  return results
+    .map(({ id, content }) => {
+      const call = calls[id];
+      const callText = call === undefined ? `tool call ${id}` : `${call.name}(${call.arguments})`;
+      const response = typeof content === "string" ? content : JSON.stringify(content);
+      const preview =
+        response.length > TOOL_RESPONSE_PREVIEW_CHARS ? `${response.slice(0, TOOL_RESPONSE_PREVIEW_CHARS)}…` : response;
+      return `${callText} → ${preview}`;
+    })
+    .join("\n");
+}
+
 // Finds the most recent user message and pulls out its text, handling both
 // the OpenAI string-content shape and the Anthropic text-block-array shape.
 function lastUserInputText(messages) {
@@ -268,7 +320,7 @@ export async function routeToAnthropic(body, incoming, env) {
   // instead of just quietly blank gen_ai.input.messages parts.
   span?.setAttribute("app.raw_input_messages", JSON.stringify(messages));
   span?.setAttribute("gen_ai.input.messages", genAiInputMessages(messages));
-  const lastInput = lastUserInputText(messages);
+  const lastInput = lastInputText(messages);
   if (lastInput !== undefined) span?.setAttribute("jess.last_input", lastInput);
   if (system !== undefined) {
     span?.setAttribute("gen_ai.system_instructions", JSON.stringify([{ type: "text", content: system }]));
@@ -368,7 +420,7 @@ export async function routeToOpenAI(body, incoming, env) {
   span?.setAttribute("gen_ai.request.model", openAiModel);
   span?.setAttribute("app.raw_input_messages", JSON.stringify(body.messages));
   span?.setAttribute("gen_ai.input.messages", genAiInputMessages(body.messages));
-  const lastInput = lastUserInputText(body.messages);
+  const lastInput = lastInputText(body.messages);
   if (lastInput !== undefined) span?.setAttribute("jess.last_input", lastInput);
   if (body.tools !== undefined) {
     span?.setAttribute("gen_ai.tool.definitions", genAiToolDefinitions(body.tools));
@@ -463,7 +515,7 @@ export async function routeToBackend(request, env) {
     span?.setAttribute("gen_ai.request.model", body.model ?? "chat");
     span?.setAttribute("app.raw_input_messages", JSON.stringify(body.messages));
     span?.setAttribute("gen_ai.input.messages", genAiInputMessages(body.messages));
-    const lastInput = lastUserInputText(body.messages);
+    const lastInput = lastInputText(body.messages);
     if (lastInput !== undefined) span?.setAttribute("jess.last_input", lastInput);
     if (body.tools !== undefined) {
       span?.setAttribute("gen_ai.tool.definitions", genAiToolDefinitions(body.tools));
