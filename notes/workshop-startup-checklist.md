@@ -6,6 +6,8 @@
 
 [] check OpenAI budget
 
+[] switch Claude back to work
+
 Two independent Modal apps, deployed and stopped separately.
 
 ## 1. base + chat pair (`llm-api/app.py`)
