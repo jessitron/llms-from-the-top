@@ -8,7 +8,7 @@ One way is in AGENTS.md, that standard file at the root of the project that agen
 
 1. When your agent starts up, look for AGENTS.md. If it exists in the current directory, read it into the system prompt.
 
-Example: vort_6a.rb
+Example: vort_5a.rb
 
 ## Try this
 

@@ -2,6 +2,10 @@
 
 I totally used Claude to write the examples in this part. They do illustrate what we're trying to do here.
 
+Can we use even fewer tokens to do the same work? To write the changelog entry, does the agent need the full history of making the change?
+## 
+
+
 ---
 
 Claude wrote this, I won't ask anyone to read it because I haven't yet:
