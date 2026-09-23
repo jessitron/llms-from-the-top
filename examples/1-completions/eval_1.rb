@@ -5,7 +5,7 @@ require "net/http"
 require "json"
 require "securerandom"
 require "time"
-require_relative "../eval_telemetry"
+require_relative "../lib/eval_telemetry"
 
 dir = __dir__
 program = ARGV[0] || "vort_1a.rb"

@@ -8,7 +8,7 @@ require "net/http"
 require "json"
 require "securerandom"
 require "time"
-require_relative "../../eval_telemetry"
+require_relative "../../lib/eval_telemetry"
 
 dir = __dir__
 vort_dir = File.dirname(dir)

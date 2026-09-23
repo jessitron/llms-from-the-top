@@ -1,6 +1,6 @@
 > **Note:** this describes Honeycomb's raw Events API, which the eval harness
 > used originally. It has since moved to sending OTLP directly to the shared
-> workshop collector instead (see `examples/eval_telemetry.rb`), because
+> workshop collector instead (see `examples/lib/eval_telemetry.rb`), because
 > that collector needs no API key and already fans out to both Honeycomb
 > teams. Since eval scoring here always finishes before the process exits,
 > the harness attaches evaluation events to the span in one OTLP export
