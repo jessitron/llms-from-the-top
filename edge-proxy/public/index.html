@@ -21,9 +21,26 @@
     <a href="https://github.com/jessitron/llms-from-the-top">llms-from-the-top</a>
     workshop. Clone the repo and follow along in <code>examples/</code>.
   </p>
+  <p><strong>Anything text you send may be used as an example for the group to see.</strong></p>
+
+  <h2>Running the examples</h2>
+  <p>You can write your own code, and/or run the examples in this repo.</p>
+  <p>To run the examples, you need Ruby 3.4.6 or better. If you don't have Ruby installed, this
+  will open a prompt in a suitable container:</p>
+  <pre>./run-in-docker</pre>
 
   <h2>Calling the API</h2>
   <p>Every request needs an <code>x-api-key</code> header — ask Jess for the value.</p>
+
+  <h2>Telemetry</h2>
+  <p>THe API provided for this workshop (llms-from-the-top.jessitron.com) sends telemetry to
+  Honeycomb. We are gonna look at that during the workshop. You can look at some of it, too, as it
+  sends to a Honeycomb sandbox environment. Only part of Honeycomb is available there, but check out</p>
+  <ul>
+    <li><a href="https://play.honeycomb.io/sandbox/environments/workshop" target="_blank">the query editor</a></li>
+    <li><a href="https://play.honeycomb.io/sandbox/environments/workshop/datasets/llms-from-the-top-edge-proxy/result/diw7mXMuTzk" target="_blank">What people are asking and the responses they get</a></li>
+    <li><a href="https://play.honeycomb.io/sandbox/environments/workshop/result/sJ7aeLhMx1x" target="_blank">scores and token counts by conversation</a></li>
+  </ul>
 
   <h2>See your conversation in Honeycomb</h2>
   <p>If you send an <code>x-conversation-id</code> header, paste that ID here to get a link to
@@ -119,6 +136,8 @@
     <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/2-chat/README.md"><code>examples/2-chat/README.md</code></a> — messages format, request/response shape</li>
     <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/3-system-prompt/README.md"><code>examples/3-system-prompt/README.md</code></a> — adding a system message</li>
     <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/4-tools/README.md"><code>examples/4-tools/README.md</code></a> — tool definitions, tool calls, tool results</li>
+    <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/5-skills/README.md"><code>examples/5-skills/README.md</code></a> — Give skills to make it smarter.</li>
+    <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/6-subagents/README.md"><code>examples/6-subagents/README.md</code></a> — Maybe we'll talk about subagents.</li>
   </ul>
 
   <h2>Available models</h2>
