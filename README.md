@@ -52,6 +52,8 @@ To run the examples, you need Ruby 3.4.6 or better. If you don't have Ruby insta
 
 THe API provided for this workshop (llms-from-the-top.jessitron.com) sends telemetry to Honeycomb. We are gonna look at that during the workshop. You can look at some of it, too, as it sends to a Honeycomb sandbox environment. Only part of Honeycomb is available there, but check out
 
+[the query editor](https://play.honeycomb.io/sandbox/environments/workshop)
+
 [What people are asking and the responses they get](https://play.honeycomb.io/sandbox/environments/workshop/datasets/llms-from-the-top-edge-proxy/result/diw7mXMuTzk)
 
 [scores and token counts by conversation](https://play.honeycomb.io/sandbox/environments/workshop/result/sJ7aeLhMx1x)
