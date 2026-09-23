@@ -1,56 +1,94 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <title>llms-from-the-top</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
-    code, pre { background: #f2f2f2; padding: 0.15em 0.4em; border-radius: 4px; }
-    pre { padding: 0.75em; overflow-x: auto; }
-    h1 { font-size: 1.5rem; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { text-align: left; padding: 0.4em 0.6em; border-bottom: 1px solid #ddd; }
-    th { border-bottom: 2px solid #999; }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 40rem;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.5;
+    }
+
+    code,
+    pre {
+      background: #f2f2f2;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+    }
+
+    pre {
+      padding: 0.75em;
+      overflow-x: auto;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 0.4em 0.6em;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      border-bottom: 2px solid #999;
+    }
   </style>
 </head>
+
 <body>
   <h1>llms-from-the-top</h1>
   <p>
     This is the API host for the
     <a href="https://github.com/jessitron/llms-from-the-top">llms-from-the-top</a>
-    workshop. Clone the repo and follow along in <code>examples/</code>.
+    workshop.
   </p>
-  <p><strong>Anything text you send may be used as an example for the group to see.</strong></p>
+  <p><strong>Anything text you send may be used as an example for the group to see! And is public in telemetry.</strong>
+  </p>
 
   <h2>Running the examples</h2>
-  <p>You can write your own code, and/or run the examples in this repo.</p>
-  <p>To run the examples, you need Ruby 3.4.6 or better. If you don't have Ruby installed, this
-  will open a prompt in a suitable container:</p>
-  <pre>./run-in-docker</pre>
-
-  <h2>Calling the API</h2>
-  <p>Every request needs an <code>x-api-key</code> header — ask Jess for the value.</p>
+  <p>You can write your own code, and/or run the examples in <a
+      href="https://github.com/jessitron/llms-from-the-top">the repo</a>.</p>
+  <p>To run the examples, you need Ruby 3.4.6 or Docker.
 
   <h2>Telemetry</h2>
   <p>THe API provided for this workshop (llms-from-the-top.jessitron.com) sends telemetry to
-  Honeycomb. We are gonna look at that during the workshop. You can look at some of it, too, as it
-  sends to a Honeycomb sandbox environment. Only part of Honeycomb is available there, but check out</p>
+    Honeycomb. We are gonna look at that during the workshop. You can look at some of it, too, as it
+    sends to a Honeycomb sandbox environment. It's public for the next 30 days, for anyone who happens upon these links.
+  </p>
+  <p>
+    Caution: Only part of Honeycomb is available there, and some links will not work.
+  </p>
+
   <ul>
-    <li><a href="https://play.honeycomb.io/sandbox/environments/workshop" target="_blank">the query editor</a></li>
-    <li><a href="https://play.honeycomb.io/sandbox/environments/workshop/datasets/llms-from-the-top-edge-proxy/result/diw7mXMuTzk" target="_blank">What people are asking and the responses they get</a></li>
-    <li><a href="https://play.honeycomb.io/sandbox/environments/workshop/result/sJ7aeLhMx1x" target="_blank">scores and token counts by conversation</a></li>
+    <li><a href="https://play.honeycomb.io/sandbox/environments/workshop" target="_blank">the blank query editor</a>
+    </li>
+    <li><a
+        href="https://play.honeycomb.io/sandbox/environments/workshop/datasets/llms-from-the-top-edge-proxy/result/diw7mXMuTzk"
+        target="_blank">What people are asking and the responses they get</a></li>
+    <li><a href="https://play.honeycomb.io/sandbox/environments/workshop/result/sJ7aeLhMx1x" target="_blank">scores and
+        token counts by conversation</a></li>
   </ul>
 
-  <h2>See your conversation in Honeycomb</h2>
-  <p>If you send an <code>x-conversation-id</code> header, paste that ID here to get a link to
-  every chat request in that conversation — what went in last, what came back, and how many
-  input tokens it took. Covers the last 2 hours.</p>
+  <p>Paste your Conversation ID here to see every chat request in that conversation.</p>
   <p>
     <label for="conversation-id">Conversation ID:</label>
     <input id="conversation-id" type="text" size="40" placeholder="620144cf-d9c5-4770-969d-663f3f0dac90" />
   </p>
-  <p id="conversation-link-p" hidden><a id="conversation-link" target="_blank">Open this conversation in Honeycomb</a></p>
+  <p id="conversation-link-p" hidden><a id="conversation-link" target="_blank">See this conversation in Honeycomb</a>
+  </p>
   <script>
     const conversationInput = document.getElementById("conversation-id");
     conversationInput.addEventListener("input", () => {
@@ -77,9 +115,12 @@
     });
   </script>
 
-  <h2><code>/v1/completions</code></h2>
+  <h2>Calling the API</h2>
+  <p>Every request needs an <code>x-api-key</code> header — ask Jess for the value.</p>
+
+  <h3><code>/v1/completions</code></h3>
   <p>Raw text completion. Given a prompt, the model continues it. No chat structure, no
-  instruction-following unless the model happens to have been trained for it.</p>
+    instruction-following unless the model happens to have been trained for it.</p>
 
   <p><strong>URI:</strong> <code>https://llms-from-the-top.jessitron.com/v1/completions</code></p>
   <p><strong>Method:</strong> POST</p>
@@ -95,7 +136,8 @@
   <p><strong>Input format</strong> (JSON body):</p>
   <pre>{ "model": "base", "prompt": "Once upon a time, a giant" }</pre>
   <ul>
-    <li><code>model</code> — <code>"base"</code> or <code>"chat"</code>. Defaults to <code>"chat"</code> if omitted.</li>
+    <li><code>model</code> — <code>"base"</code> or <code>"chat"</code>. Defaults to <code>"chat"</code> if omitted.
+    </li>
     <li><code>prompt</code> — the text to continue.</li>
     <li><code>max_tokens</code> — optional, defaults to 100.</li>
   </ul>
@@ -113,50 +155,93 @@
   -H "x-api-key: &lt;your key&gt;" -H "content-type: application/json" \
   -d '{"model": "base", "prompt": "Once upon a time, a giant"}'</pre>
 
-  <h2><code>/v1/chat/completions</code></h2>
+  <h3><code>/v1/chat/completions</code></h3>
   <p>The chat API. Looks like OpenAI's chat completions API (my endpoint doesn't support all of
-  it, and support varies by model).</p>
+    it, and support varies by model).</p>
 
   <p><strong>URI:</strong> <code>https://llms-from-the-top.jessitron.com/v1/chat/completions</code></p>
   <p><strong>Method:</strong> POST</p>
 
   <p>Same headers as above (<code>content-type</code> and <code>x-api-key</code> required;
-  <code>x-conversation-id</code> and <code>x-agent-name</code> optional).</p>
+    <code>x-conversation-id</code> and <code>x-agent-name</code> optional).
+  </p>
 
   <pre>curl https://llms-from-the-top.jessitron.com/v1/chat/completions \
   -H "x-api-key: &lt;your key&gt;" -H "content-type: application/json" \
   -d '{"messages": [{"role": "user", "content": "hi"}]}'</pre>
 
   <p>Valid <code>model</code> values: <code>base</code>, <code>chat</code>, <code>better</code>,
-  <code>haiku</code>, <code>luna</code>, <code>nano</code> (omit for the default chat model).</p>
+    <code>haiku</code>, <code>luna</code>, <code>nano</code> (omit for the default chat model).
+  </p>
 
   <p>The request/response shape grows as the workshop progresses — messages, system prompts, tool
-  definitions and tool calls. See these, in order, for the details:</p>
+    definitions and tool calls. See these, in order, for the details:</p>
   <ul>
-    <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/2-chat/README.md"><code>examples/2-chat/README.md</code></a> — messages format, request/response shape</li>
-    <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/3-system-prompt/README.md"><code>examples/3-system-prompt/README.md</code></a> — adding a system message</li>
-    <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/4-tools/README.md"><code>examples/4-tools/README.md</code></a> — tool definitions, tool calls, tool results</li>
-    <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/5-skills/README.md"><code>examples/5-skills/README.md</code></a> — Give skills to make it smarter.</li>
-    <li><a href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/6-subagents/README.md"><code>examples/6-subagents/README.md</code></a> — Maybe we'll talk about subagents.</li>
+    <li><a
+        href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/2-chat/README.md"><code>examples/2-chat/README.md</code></a>
+      — messages format, request/response shape</li>
+    <li><a
+        href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/3-system-prompt/README.md"><code>examples/3-system-prompt/README.md</code></a>
+      — adding a system message</li>
+    <li><a
+        href="https://github.com/jessitron/llms-from-the-top/blob/main/examples/4-tools/README.md"><code>examples/4-tools/README.md</code></a>
+      — tool definitions, tool calls, tool results</li>
   </ul>
 
-  <h2>Available models</h2>
+  <h3>Available models</h3>
   <table>
     <thead>
-      <tr><th>Alias</th><th>Real model</th><th>Size</th><th>Inference server</th></tr>
+      <tr>
+        <th>Alias</th>
+        <th>Real model</th>
+        <th>Size</th>
+        <th>Inference server</th>
+      </tr>
     </thead>
     <tbody>
-      <tr><td><code>base</code></td><td>mistralai/Mistral-7B-v0.1</td><td>7B</td><td>Modal (vLLM)</td></tr>
-      <tr><td><code>chat</code></td><td>mistralai/Mistral-7B-Instruct-v0.1</td><td>7B</td><td>Modal (vLLM)</td></tr>
-      <tr><td><code>better</code></td><td>mistralai/Mistral-Small-3.2-24B-Instruct-2506</td><td>24B</td><td>Modal (vLLM)</td></tr>
-      <tr><td><code>haiku</code></td><td>claude-haiku-4-5</td><td>undisclosed</td><td>Anthropic API</td></tr>
-      <tr><td><code>luna</code></td><td>gpt-4o-mini</td><td>undisclosed</td><td>OpenAI API</td></tr>
-      <tr><td><code>nano</code></td><td>gpt-4.1-nano</td><td>undisclosed</td><td>OpenAI API</td></tr>
+      <tr>
+        <td><code>base</code></td>
+        <td>mistralai/Mistral-7B-v0.1</td>
+        <td>7B</td>
+        <td>Modal (vLLM)</td>
+      </tr>
+      <tr>
+        <td><code>chat</code></td>
+        <td>mistralai/Mistral-7B-Instruct-v0.1</td>
+        <td>7B</td>
+        <td>Modal (vLLM)</td>
+      </tr>
+      <tr>
+        <td><code>better</code></td>
+        <td>mistralai/Mistral-Small-3.2-24B-Instruct-2506</td>
+        <td>24B</td>
+        <td>Modal (vLLM)</td>
+      </tr>
+      <tr>
+        <td><code>haiku</code></td>
+        <td>claude-haiku-4-5</td>
+        <td>undisclosed</td>
+        <td>Anthropic API</td>
+      </tr>
+      <tr>
+        <td><code>luna</code></td>
+        <td>gpt-4o-mini</td>
+        <td>undisclosed</td>
+        <td>OpenAI API</td>
+      </tr>
+      <tr>
+        <td><code>nano</code></td>
+        <td>gpt-4.1-nano</td>
+        <td>undisclosed</td>
+        <td>OpenAI API</td>
+      </tr>
     </tbody>
   </table>
   <p><code>base</code> isn't instruction-tuned, so it only makes sense on
-  <code>/v1/completions</code>. Everything else — including <code>chat</code> — works on
-  <code>/v1/chat/completions</code>; <code>haiku</code>, <code>luna</code>, and <code>nano</code>
-  support that endpoint only.</p>
+    <code>/v1/completions</code>. Everything else — including <code>chat</code> — works on
+    <code>/v1/chat/completions</code>; <code>haiku</code>, <code>luna</code>, and <code>nano</code>
+    support that endpoint only.
+  </p>
 </body>
+
 </html>
