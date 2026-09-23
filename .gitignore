@@ -4,3 +4,4 @@ __pycache__/
 .wrangler/
 node_modules/
 .ruby-lsp/last_updated
+try/
