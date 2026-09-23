@@ -4,19 +4,37 @@ require "net/http"
 require "json"
 require "securerandom"
 
-SYSTEM_PROMPT = "You are vort, a coding assistant. You quickly admit when you don't know something. But you don't do other jobs; in fact you are rather insulted when asked to do work that is not coding."
+SYSTEM_PROMPT =
+  "You are vort, a coding assistant. You quickly admit when you don't know something. But you don't do other jobs; in fact you are rather insulted when asked to do work that is not coding."
 
 TOOLS = [
-  { type: "function", function:
-    { name: "list_files",
+  {
+    type: "function",
+    function: {
+      name: "list_files",
       description: "List files in the current directory",
-      parameters: { type: "object", properties: {} } 
+      parameters: {
+        type: "object",
+        properties: {
+        }
+      }
     }
   },
-  { type: "function", function:
-    { name: "read_file",
+  {
+    type: "function",
+    function: {
+      name: "read_file",
       description: "Read a file's contents",
-      parameters: { type: "object", properties: { path: { type: "string", description: "path to the file" } }, required: ["path"] } 
+      parameters: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "path to the file"
+          }
+        },
+        required: ["path"]
+      }
     }
   }
 ]
@@ -25,7 +43,7 @@ model = ENV["MODEL"] || "better"
 MAX_FILE_READ = 4000
 CONVERSATION_ID = ENV["CONVERSATION_ID"] || SecureRandom.uuid
 
-messages = [ { role: "system", content: SYSTEM_PROMPT } ]
+messages = [{ role: "system", content: SYSTEM_PROMPT }]
 loop do
   print "vort> "
   input = gets.chomp
@@ -34,12 +52,17 @@ loop do
   loop do
     messages << { role: "user", content: input }
     request = { model: model, messages: messages, tools: TOOLS }
-    response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/chat/completions"), request.to_json, {
-      "content-type": "application/json",
-      "x-api-key": "exploreddd",
-      "x-agent-name": "vort_4b",
-      "x-conversation-id": CONVERSATION_ID
-    }
+    response =
+      Net::HTTP.post URI(
+                       "https://llms-from-the-top.jessitron.com/v1/chat/completions"
+                     ),
+                     request.to_json,
+                     {
+                       "content-type": "application/json",
+                       "x-api-key": "exploreddd",
+                       "x-agent-name": "vort_4b",
+                       "x-conversation-id": CONVERSATION_ID
+                     }
     case response
     in Net::HTTPSuccess
       completion = JSON.parse(response.body)
@@ -51,7 +74,14 @@ loop do
         result = Dir.children(".").join("\n")
       when /\[TOOL_CALLS\]read_file.*"path":\s*"(?<path>[^"]+)"/m
         filename = $~[:path]
-        result = File.exist?(filename) ? File.read(filename, encoding: "UTF-8")[0..MAX_FILE_READ] : "File not found <#{filename}>"
+        result =
+          (
+            if File.exist?(filename)
+              File.read(filename, encoding: "UTF-8")[0..MAX_FILE_READ]
+            else
+              "File not found <#{filename}>"
+            end
+          )
       else
         break # read the next message from the user
       end

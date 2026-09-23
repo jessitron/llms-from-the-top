@@ -13,12 +13,17 @@ loop do
   break if input in "exit" | "quit"
 
   request = { model: "chat", prompt: "[INST] #{input} [/INST]" }
-  response = Net::HTTP.post URI("https://llms-from-the-top.jessitron.com/v1/completions"), request.to_json, {
-    "content-type": "application/json",
-    "x-api-key": "exploreddd",
-    "x-agent-name": "vort_2a",
-    "x-conversation-id": CONVERSATION_ID,
-  }
+  response =
+    Net::HTTP.post URI(
+                     "https://llms-from-the-top.jessitron.com/v1/completions"
+                   ),
+                   request.to_json,
+                   {
+                     "content-type": "application/json",
+                     "x-api-key": "exploreddd",
+                     "x-agent-name": "vort_2a",
+                     "x-conversation-id": CONVERSATION_ID
+                   }
   case response
   in Net::HTTPSuccess
     completion = JSON.parse(response.body)
@@ -29,4 +34,3 @@ loop do
   end
 end
 puts "Goodbye!"
-
