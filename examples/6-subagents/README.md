@@ -1,5 +1,7 @@
 # 6 Subagents
 
+I totally used Claude to write the examples in this part. They do illustrate what we're trying to do here.
+
 ---
 
 Claude wrote this, I won't ask anyone to read it because I haven't yet:
@@ -50,7 +52,7 @@ subagent's own reads, writes, or `git diff` calls.
 
 ## Notice that
 
-vort_6a's top-level `AGENTS.md` doesn't say anything about changelog format
+vort*6a's top-level `AGENTS.md` doesn't say anything about changelog format
 or commit style — it just says "update the changelog" and "commit when
-instructed." The _how_ lives entirely inside the two subagent tools, not in
+instructed." The \_how* lives entirely inside the two subagent tools, not in
 anything the top-level model has to read, remember, or get right itself.
