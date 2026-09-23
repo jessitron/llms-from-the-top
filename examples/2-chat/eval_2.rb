@@ -71,7 +71,7 @@ test_cases.each do |tc|
   identity = {
     "gen_ai.conversation.id": conversation_id,
     "gen_ai.agent.name": program.sub(/\.rb$/, ""),
-    "gen_ai.request.model": ENV["MODEL"],
+    "gen_ai.request.model": ENV["MODEL"] || "chat",
     "app.eval.suite": File.basename(dir),
     "app.eval.program": program,
     "app.eval.input": tc[:input]
