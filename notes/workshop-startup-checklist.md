@@ -1,12 +1,14 @@
 # Before the workshop: what to start up
 
-[] push this repo
+[x] push this repo
 
 [] check Anthropic budget
 
 [] check OpenAI budget
 
-[] switch Claude back to work
+[x] switch Claude back to work
+
+[x] start llm-api
 
 Two independent Modal apps, deployed and stopped separately.
 

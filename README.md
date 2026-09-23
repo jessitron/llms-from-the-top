@@ -33,6 +33,8 @@ Write your own code to do this as we go along! Or run mine, as provided for each
 
 This is the planned material, but if we get off on tangents, great! The point is to play with this and learn stuff together. Right now everyone has different bits of knowledge about how to work with these tools. I'm gonna learn some stuff from you in here, you'll pick something or other up from me, and we'll all learn from each other.
 
+[Cat Hicks on zippers](https://social.treehouse.systems/@grimalkina@mastodon.social/117140184185490353) via Ruth Malan
+
 1. What is an LLM? try out a completion machine with an API call.
 2. Make a loop to create a chatbot.
 3. Add a system prompt to give it character.
