@@ -9,7 +9,7 @@ require "json"
 require "securerandom"
 require "time"
 require_relative "../../lib/eval_telemetry"
-
+#TODO
 dir = __dir__
 vort_dir = File.dirname(dir)
 max_nudges = 5
@@ -33,6 +33,12 @@ runs = [
   },
   {
     program: "vort_6b.rb",
+    workspace_dir: "#{dir}/workspace-6b",
+    checks: base_checks
+  },
+  # vort_6c is vort_6b plus tracing, so it needs exactly what 6b needs
+  {
+    program: "vort_6c.rb",
     workspace_dir: "#{dir}/workspace-6b",
     checks: base_checks
   }
@@ -238,5 +244,12 @@ runs.each do |run|
                  },
                  scored_at,
                  evaluations
-  puts "trace: #{trace_link(trace_id, span_id, span_start, scored_at)}"
+  puts "eval trace: #{trace_link(trace_id, span_id, span_start, scored_at)}"
+  # vort_6c prints a "  trace: <link>" line for each invoke_agent span; the
+  # first one per trace_id is the top-level agent, one trace per user turn
+  transcript
+    .scan(%r{^  trace: (\S+)})
+    .flatten
+    .uniq { |link| link[/trace_id=(\w+)/, 1] }
+    .each { |link| puts "vort trace: #{link}" }
 end

@@ -13,7 +13,7 @@ challenge is whether vort actually *delegates*: does it call
 `CHANGELOG.md` or running `git commit` directly with its own top-level
 `write_file`/`run_command` tools?
 
-## Two workspaces, one per vort
+## Workspaces
 
 - `workspace-6a/` — for `vort_6a.rb`, which has the changelog-format and
   commit-style rules hard-coded as the two subagents' system prompts.
@@ -23,6 +23,9 @@ challenge is whether vort actually *delegates*: does it call
   from `../`). This workspace carries its own copy of `subagents/` so a
   throwaway `tmp_dir` copy is self-contained, the same way
   `workspace-5b/skills/` carries its own copy for vort_5b.
+
+`vort_6c.rb` reuses `workspace-6b/`: it is vort_6b plus OpenTelemetry
+tracing, and reads its subagents the same way.
 
 Both workspaces behave identically from vort's point of view — the only
 difference is *how* each program's own source gets the subagent prompts
@@ -44,8 +47,8 @@ never `run_command` with `git commit` at the top level.
 ruby eval_6.rb
 ```
 
-This drives both `vort_6a.rb` (against `workspace-6a/`) and `vort_6b.rb`
-(against `workspace-6b/`), each in its own throwaway copy of its workspace
+This drives `vort_6a.rb` (against `workspace-6a/`), `vort_6b.rb` and
+`vort_6c.rb` (both against `workspace-6b/`), each in its own throwaway copy of its workspace
 (with a git repo initialized in it, so `make_commit`'s subagent has
 something real to commit into), then checks: does `greeter.rb` actually
 behave the new way, is the changelog entry present and correctly
@@ -53,8 +56,11 @@ formatted, did vort delegate both steps instead of doing them itself, did
 each subagent stay inside its restricted tools (the changelog subagent
 never calls `run_command`, the commit subagent never calls `write_file`),
 and did a real commit land with a message in this project's style.
-Results are also posted to Honeycomb via `../../eval_telemetry.rb`, same
-as the other evals.
+Results are also posted to Honeycomb via `../../lib/eval_telemetry.rb`,
+same as the other evals, and each run prints an `eval trace:` link to its
+score span in the play.honeycomb.io sandbox. vort_6c runs also print a
+`vort trace:` link per user turn, to vort_6c's own trace (a separate trace
+from the eval span).
 
 ## Layout
 

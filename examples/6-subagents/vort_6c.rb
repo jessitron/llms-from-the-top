@@ -155,6 +155,7 @@ def run_conversation(messages, tools, handlers, conversation_id, agent_name)
       "gen_ai.tool.definitions" => tools.map { |t| { type: "function", **t[:function] } }.to_json
     }
   ) do |agent_span|
+    puts "  trace: https://play.honeycomb.io/sandbox/environments/workshop/datasets/vort/trace?#{URI.encode_www_form(trace_id: agent_span.context.hex_trace_id, span: agent_span.context.hex_span_id, trace_start_ts: Time.now.to_i - 60, trace_end_ts: Time.now.to_i + 600)}"
     loop do
       response = call_model(messages, tools, conversation_id, agent_name)
       case response
