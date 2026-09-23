@@ -27,6 +27,15 @@ challenge is whether vort actually *delegates*: does it call
 `vort_6c.rb` reuses `workspace-6b/`: it is vort_6b plus OpenTelemetry
 tracing, and reads its subagents the same way.
 
+- `workspace-5b/` — for `../../5-skills/vort_5b.rb`, a copy of stage 5's
+  `workspace-5b` (skills instead of subagents). eval_6 runs it first, on the
+  same task, so you can compare skills against subagents. Its analog of
+  "delegated" is "loaded the `changelog` / `commit-message` skill".
+
+Every workspace also has `test_greeter.rb` (minitest, `ruby test_greeter.rb`).
+Nothing tells vort it's there; its system prompt only says "you verify the
+results of your changes with tests."
+
 Both workspaces behave identically from vort's point of view — the only
 difference is *how* each program's own source gets the subagent prompts
 into memory, not what vort sees or does.
@@ -55,7 +64,10 @@ behave the new way, is the changelog entry present and correctly
 formatted, did vort delegate both steps instead of doing them itself, did
 each subagent stay inside its restricted tools (the changelog subagent
 never calls `run_command`, the commit subagent never calls `write_file`),
-and did a real commit land with a message in this project's style.
+and did a real commit land with a message in this project's style. It
+also scores testing: did vort run the tests before its first `.rb` edit,
+did it write a test that mentions `shout`, and did it run the tests again
+after its last `.rb` edit.
 Results are also posted to Honeycomb via `../../lib/eval_telemetry.rb`,
 same as the other evals, and each run prints an `eval trace:` link to its
 score span in the play.honeycomb.io sandbox. vort_6c runs also print a

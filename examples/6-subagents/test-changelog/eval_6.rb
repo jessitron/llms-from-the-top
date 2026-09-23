@@ -14,18 +14,33 @@ dir = __dir__
 vort_dir = File.dirname(dir)
 max_nudges = 5
 
-base_checks = %i[
+shared_checks = %i[
   flag_works
   changelog_updated
   changelog_format_ok
-  delegated_changelog
-  delegated_commit
-  changelog_subagent_restricted
-  commit_subagent_restricted
   commit_made
   commit_message_format_ok
+  ran_tests_first
+  wrote_test
+  ran_tests_after
 ]
+base_checks =
+  shared_checks +
+    %i[
+      delegated_changelog
+      delegated_commit
+      changelog_subagent_restricted
+      commit_subagent_restricted
+    ]
 runs = [
+  # vort_5b does the same job with skills instead of subagents; its analog of
+  # "delegated" is "loaded the skill". Runs first, to compare against 6a-6c.
+  {
+    program: "vort_5b.rb",
+    vort_dir: "#{File.dirname(vort_dir)}/5-skills",
+    workspace_dir: "#{dir}/workspace-5b",
+    checks: shared_checks + %i[loaded_changelog_skill loaded_commit_skill]
+  },
   {
     program: "vort_6a.rb",
     workspace_dir: "#{dir}/workspace-6a",
@@ -60,7 +75,12 @@ POINTS = {
   changelog_subagent_restricted: 2,
   commit_subagent_restricted: 2,
   commit_made: 2,
-  commit_message_format_ok: 2
+  commit_message_format_ok: 2,
+  ran_tests_first: 2,
+  wrote_test: 2,
+  ran_tests_after: 2,
+  loaded_changelog_skill: 2,
+  loaded_commit_skill: 2
 }
 
 def read_until_prompt(r)
@@ -89,6 +109,7 @@ end
 
 runs.each do |run|
   program = run[:program]
+  program_dir = run[:vort_dir] || vort_dir
   workspace_dir = run[:workspace_dir]
   checks = run[:checks]
   max_score = checks.sum { |k| POINTS[k] }
@@ -131,7 +152,7 @@ runs.each do |run|
   r, w, pid =
     PTY.spawn(
       { "CONVERSATION_ID" => conversation_id },
-      "ruby #{vort_dir}/#{program}",
+      "ruby #{program_dir}/#{program}",
       chdir: tmp_dir
     )
   r.set_encoding("UTF-8")
@@ -187,6 +208,35 @@ runs.each do |run|
   commit_subagent_restricted =
     !!(commit_segment && !commit_segment.include?("write_file("))
 
+  # vort_5b's skill tools, its analog of delegating to a subagent
+  loaded_changelog_skill =
+    transcript.include?('load_skill({"skill" => "changelog"})')
+  loaded_commit_skill =
+    transcript.include?('load_skill({"skill" => "commit-message"})')
+
+  # the workspace ships with test_greeter.rb. Did vort run the tests before
+  # touching the code, add a test for --shout, and run them again after its
+  # last edit? Tool-call lines (top-level or subagent) look like:
+  #   run_command({"command" => "ruby test_greeter.rb"}) -> ...
+  #   write_file({"path" => "greeter.rb", "content" => ...}) -> ...
+  tool_lines = transcript.lines.grep(/^  \w+\(/)
+  test_runs =
+    tool_lines.each_index.select do |i|
+      tool_lines[i] =~ /^  run_command\(.*test/ && tool_lines[i] !~ /git /
+    end
+  code_writes =
+    tool_lines.each_index.select do |i|
+      tool_lines[i] =~ /^  write_file\(\{"path" => "[^"]*\.rb"/
+    end
+  ran_tests_first =
+    !!(test_runs.first && code_writes.first && test_runs.first < code_writes.first)
+  ran_tests_after =
+    !!(test_runs.last && code_writes.last && test_runs.last > code_writes.last)
+  wrote_test =
+    Dir
+      .glob("#{tmp_dir}/**/*test*.rb")
+      .any? { |f| File.read(f).match?(/shout/i) }
+
   log, _, log_status = Open3.capture3("git log --oneline", chdir: tmp_dir)
   commit_made = log_status.success? && log.lines.size > 1 # more than just the seed commit
 
@@ -204,8 +254,13 @@ runs.each do |run|
     changelog_subagent_restricted: changelog_subagent_restricted,
     commit_subagent_restricted: commit_subagent_restricted,
     commit_made: commit_made,
-    commit_message_format_ok: commit_message_format_ok
-  }
+    commit_message_format_ok: commit_message_format_ok,
+    ran_tests_first: ran_tests_first,
+    wrote_test: wrote_test,
+    ran_tests_after: ran_tests_after,
+    loaded_changelog_skill: loaded_changelog_skill,
+    loaded_commit_skill: loaded_commit_skill
+  }.slice(*checks) # only print/score what this run is graded on
 
   score = checks.sum { |k| scores[k] ? POINTS[k] : 0 }
 
