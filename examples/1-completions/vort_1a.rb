@@ -2,7 +2,6 @@
 
 require 'net/http'
 require 'json'
-require 'securerandom'
 
 print 'vort> '
 input = gets.chomp
