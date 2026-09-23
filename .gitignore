@@ -5,3 +5,4 @@ __pycache__/
 node_modules/
 .ruby-lsp/last_updated
 try/
+tmp/
