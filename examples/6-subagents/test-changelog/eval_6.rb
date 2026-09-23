@@ -9,7 +9,7 @@ require "json"
 require "securerandom"
 require "time"
 require_relative "../../lib/eval_telemetry"
-#TODO
+
 dir = __dir__
 vort_dir = File.dirname(dir)
 max_nudges = 5
@@ -107,7 +107,7 @@ runs.each do |run|
   identity = {
     "gen_ai.conversation.id": conversation_id,
     "gen_ai.agent.name": program.sub(/\.rb$/, ""),
-    "gen_ai.request.model": ENV["MODEL"],
+    "gen_ai.request.model": ENV["MODEL"] || "haiku",
     "app.eval.suite": File.basename(dir),
     "app.eval.program": program,
     "app.eval.test_case": test_case[:name],
@@ -226,7 +226,9 @@ runs.each do |run|
   FileUtils.remove_entry(tmp_dir)
 
   evaluations =
-    checks.map { |name| [name.to_s, scores[name] ? 1 : 0, scores[name] ? "yes" : "no", nil] }
+    checks.map do |name|
+      [name.to_s, scores[name] ? 1 : 0, scores[name] ? "yes" : "no", nil]
+    end
   evaluations << ["overall", score.to_f / max_score, grade, diff]
   post_eval_span identity,
                  trace_id,
@@ -248,7 +250,7 @@ runs.each do |run|
   # vort_6c prints a "  trace: <link>" line for each invoke_agent span; the
   # first one per trace_id is the top-level agent, one trace per user turn
   transcript
-    .scan(%r{^  trace: (\S+)})
+    .scan(/^  trace: (\S+)/)
     .flatten
     .uniq { |link| link[/trace_id=(\w+)/, 1] }
     .each { |link| puts "vort trace: #{link}" }
