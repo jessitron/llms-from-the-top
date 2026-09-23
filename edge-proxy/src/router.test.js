@@ -9,6 +9,7 @@ const { capturedAttributes, fakeSpan } = vi.hoisted(() => {
     setAttribute: (key, value) => {
       capturedAttributes[key] = value;
     },
+    spanContext: () => ({ traceId: "fake-trace-id", spanId: "fake-span-id" }),
   };
   return { capturedAttributes, fakeSpan };
 });
@@ -392,6 +393,9 @@ describe("routeToAnthropic", () => {
     expect(json.choices[0].message).toEqual({ role: "assistant", content: "hello there" });
     expect(json.choices[0].finish_reason).toBe("end_turn");
     expect(json.usage).toEqual({ prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 });
+    expect(json.trace_link).toMatch(
+      /^https:\/\/play\.honeycomb\.io\/sandbox\/environments\/workshop\/datasets\/llms-from-the-top-edge-proxy\/trace\?.*trace_id=fake-trace-id.*span=fake-span-id/,
+    );
   });
 
   it("passes through a non-ok response from Anthropic unchanged", async () => {

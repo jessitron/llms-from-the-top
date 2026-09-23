@@ -8,6 +8,31 @@ import { trace } from "@opentelemetry/api";
 
 const DEFAULT_MAX_TOKENS = 200;
 
+// Honeycomb's open sandbox instance — not the usual us.honeycomb.io — with
+// its own team ("sandbox") and a "workshop" environment set up so people can
+// see the data without creating an account. The dataset matches this
+// service's OTel service.name (see index.js's `config`), since Honeycomb
+// names a dataset after the service that first writes to it.
+const HONEYCOMB_TRACE_BASE =
+  "https://play.honeycomb.io/sandbox/environments/workshop/datasets/llms-from-the-top-edge-proxy/trace";
+
+// Bonus field on every chat response: a direct link to this request's trace
+// in Honeycomb, so participants can click straight from a response into the
+// trace that produced it. trace_start_ts/trace_end_ts just bound the search
+// window generously around "now" — they don't need to be exact.
+function traceLink(span) {
+  const traceId = span?.spanContext().traceId;
+  if (traceId === undefined) return undefined;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const params = new URLSearchParams({
+    trace_id: traceId,
+    span: span.spanContext().spanId,
+    trace_start_ts: nowSeconds - 60,
+    trace_end_ts: nowSeconds + 60,
+  });
+  return `${HONEYCOMB_TRACE_BASE}?${params}`;
+}
+
 // Honeycomb's Gen AI message format (see genai-message-format.md): each
 // message becomes { role, parts: [...] }, JSON-encoded as a single string
 // per gen_ai.input.messages / gen_ai.output.messages attribute. Note the
@@ -312,6 +337,7 @@ export async function routeToAnthropic(body, incoming, env) {
       total_tokens:
         (anthropicResponse.usage?.input_tokens ?? 0) + (anthropicResponse.usage?.output_tokens ?? 0),
     },
+    trace_link: traceLink(span),
   });
 }
 
@@ -374,7 +400,7 @@ export async function routeToOpenAI(body, incoming, env) {
   if (openAiResponse.usage?.completion_tokens !== undefined) {
     span?.setAttribute("gen_ai.usage.output_tokens", openAiResponse.usage.completion_tokens);
   }
-  return Response.json(openAiResponse, { status: response.status });
+  return Response.json({ ...openAiResponse, trace_link: traceLink(span) }, { status: response.status });
 }
 
 export const VALID_MODELS = ["base", "chat", "better", "haiku", "luna", "nano"];
@@ -498,5 +524,5 @@ export async function routeToBackend(request, env) {
   if (responseBody.usage?.completion_tokens !== undefined) {
     span?.setAttribute("gen_ai.usage.output_tokens", responseBody.usage.completion_tokens);
   }
-  return Response.json(responseBody, { status: response.status });
+  return Response.json({ ...responseBody, trace_link: traceLink(span) }, { status: response.status });
 }
