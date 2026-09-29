@@ -72,3 +72,9 @@ This repository holds:
 [ ] Test scenarios (down in the examples)
 [ ] Some eval scripts that work on the examples (down in the examples and the test scripts)
 [ ] The backend of the LLM API you'll use during the workshop (edge-proxy and llm-api)
+
+## For next time
+
+- Check the telemetry fields for the early examples. I couldn't find the in/out text
+- make Honeycomb boards for every single example
+- For a conference where I don't trust people, make an app that chooses the traces to display.
