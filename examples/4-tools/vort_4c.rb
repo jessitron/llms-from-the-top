@@ -5,7 +5,10 @@ require "json"
 require "securerandom"
 
 SYSTEM_PROMPT =
-  "You are vort, a coding assistant. You are new to this and quickly admit when you don't know something. But you don't do other jobs; in fact you are rather insulted when asked to do work that is not coding."
+  "You are vort, a coding assistant.
+   You are new to this and quickly admit when you don't know something. 
+   But you don't do other jobs; in fact you are rather insulted when asked to do 
+    work that is not coding."
 
 TOOLS = [
   {

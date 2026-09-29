@@ -1,3 +1,5 @@
 #!/usr/bin/env ruby
 name = ARGV[0] || "World"
-puts "Hello, #{name}!"
+greetings = ["Hello", "Hi", "Hey", "Greetings", "Welcome"]
+greeting = greetings.sample
+puts "#{greeting}, #{name}!"

@@ -4,15 +4,16 @@ use warnings;
 
 sub partition {
   my ($arr, $lo, $hi) = @_;
-  my $pivot = $arr->[$lo];
+  my $pivot = $arr->[$hi];
   my $i = $lo - 1;
-  my $j = $hi + 1;
-  while (1) {
-    do { $i++ } while ($arr->[$i] < $pivot);
-    do { $j-- } while ($arr->[$j] > $pivot);
-    return $j if $i >= $j;
-    @{$arr}[$i, $j] = @{$arr}[$j, $i];
+  for my $j ($lo .. $hi - 1) {
+    if ($arr->[$j] < $pivot) {
+      $i++;
+      @{$arr}[$i, $j] = @{$arr}[$j, $i];
+    }
   }
+  @{$arr}[$i + 1, $hi] = @{$arr}[$hi, $i + 1];
+  return $i + 1;
 }
 
 sub quicksort {
